@@ -9,7 +9,7 @@ export default function MessageList(props: {
   return (
     <div className="log" ref={props.logRef}>
       {props.turns.length === 0 && (
-        <p className="muted">
+        <p className="empty">
           This chat belongs to the tab you are on. Switch tabs and you get a separate one; come back
           and this is still here. To ask about the page itself, change &ldquo;Do not read the
           page&rdquo; below.

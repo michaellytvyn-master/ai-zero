@@ -1,39 +1,39 @@
 import { describe, expect, it } from 'vitest'
-import { describeSite, originPatternFor } from './permissions'
+import { ALL_SITES, describeSite, isReadable } from './permissions'
 
-describe('originPatternFor', () => {
-  it('asks for one site, not every site', () => {
-    expect(originPatternFor('https://example.com/some/article?x=1')).toBe('https://example.com/*')
-    expect(originPatternFor('http://localhost:3000/dashboard')).toBe('http://localhost/*')
+describe('ALL_SITES', () => {
+  /**
+   * One prompt covering every site, rather than one per domain. It is in
+   * optional_host_permissions, so nothing is granted until the user says yes.
+   */
+  it('covers ordinary web pages and nothing else', () => {
+    expect(ALL_SITES).toEqual(['http://*/*', 'https://*/*'])
+    expect(ALL_SITES).not.toContain('<all_urls>')
+  })
+})
+
+describe('isReadable', () => {
+  it('accepts ordinary pages', () => {
+    expect(isReadable('https://example.com/a')).toBe(true)
+    expect(isReadable('http://localhost:3000/x')).toBe(true)
   })
 
-  it('keeps subdomains separate, so one grant does not cover a sibling', () => {
-    expect(originPatternFor('https://docs.example.com/a')).toBe('https://docs.example.com/*')
-    expect(originPatternFor('https://docs.example.com/a')).not.toBe(
-      originPatternFor('https://api.example.com/a'),
-    )
-  })
-
-  it('refuses schemes an extension cannot read anyway', () => {
+  it('rejects what no extension can read, whatever is granted', () => {
     for (const url of [
       'chrome://extensions',
       'chrome-extension://abc/panel.html',
       'about:blank',
       'file:///Users/me/notes.txt',
       'devtools://devtools/bundled/x.html',
+      '',
     ]) {
-      expect(originPatternFor(url)).toBeNull()
+      expect(isReadable(url)).toBe(false)
     }
-  })
-
-  it('refuses a value that is not a URL', () => {
-    expect(originPatternFor('')).toBeNull()
-    expect(originPatternFor('not a url')).toBeNull()
   })
 })
 
 describe('describeSite', () => {
-  it('names the host, which is what the user is being asked about', () => {
+  it('names the host, which is what a message should mention', () => {
     expect(describeSite('https://news.example.com/article/1')).toBe('news.example.com')
   })
 

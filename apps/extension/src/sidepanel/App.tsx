@@ -1,23 +1,19 @@
 import type { Savings } from '@zca/pricing'
-import type { ChatMessage } from '@zca/shared'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { streamChat, usesOwnKeys } from '@/lib/chat'
-import { SITE_URL } from '@/lib/config'
-import { contextCharBudget } from '@/lib/context-budget'
-import { appendMessage, createConversation } from '@/lib/conversations'
+import { useEffect, useRef, useState } from 'react'
+import { usesOwnKeys } from '@/lib/chat'
 import { pickableModels } from '@/lib/models'
-import { type PageMode, asContextMessage, readPage } from '@/lib/page-context'
-import { describeSite, requestPageAccess } from '@/lib/permissions'
+import type { PageMode } from '@/lib/page-context'
+import { isReadable, requestPageAccess } from '@/lib/permissions'
 import { loadSavings } from '@/lib/savings'
-import { takePendingQuote } from '@/lib/tabs'
 import { type Session, loadSession, signOut } from '@/lib/session'
-import { applyEvent } from './apply-event'
+import { takePendingQuote } from '@/lib/tabs'
 import Composer from './Composer'
+import ExhaustedNotice from './ExhaustedNotice'
 import Header from './Header'
+import MessageList from './MessageList'
 import SavingsPanel from './SavingsPanel'
 import SignIn from './SignIn'
-import MessageList from './MessageList'
-import { newTurn } from './turn'
+import { useSend } from './use-send'
 import { useTabChat } from './use-tab-chat'
 
 type Exhausted = { label: string; url: string }[]
@@ -57,80 +53,24 @@ export default function App() {
     panel.scrollTo({ top: panel.scrollHeight })
   }, [turns])
 
-  const send = useCallback(async () => {
-    const content = chat.draft.trim()
-    if (content.length === 0 || busy || signedIn === null) return
-
-    patchChat({ draft: '' })
-    setBusy(true)
-    setError(null)
-    setExhausted(null)
-
-    const history: ChatMessage[] = [...turns, { role: 'user' as const, content }].map((turn) => ({
-      role: turn.role,
-      content: turn.content,
-    }))
-    setTurns((previous) => [...previous, newTurn('user', content), newTurn('assistant', '')])
-
-    if (chat.pageMode !== 'off' && tabId !== null) {
-      try {
-        const budget = contextCharBudget(pickableModels(signedIn), chat.model)
-        const page = await readPage(tabId, chat.pageMode, budget)
-        history.unshift({ role: 'system', content: asContextMessage(page) })
-        setAttached(
-          `${page.title || page.url} · ${page.mode} · ${page.content.length.toLocaleString()} chars${
-            page.truncated ? ' (truncated)' : ''
-          }`,
-        )
-      } catch (cause) {
-        setError(cause instanceof Error ? cause.message : 'Could not read the page.')
-        setTurns((previous) => previous.slice(0, -2))
-        setBusy(false)
-        return
-      }
-    } else {
-      setAttached(null)
-    }
-
-    let conversationId = chat.conversationId
-    if (conversationId === null) {
-      conversationId = await createConversation(signedIn, content).catch(() => null)
-      if (conversationId !== null) patchChat({ conversationId })
-    }
-    if (conversationId !== null) {
-      await appendMessage(signedIn, conversationId, { role: 'user', content })
-    }
-
-    let answer = ''
-    let answeredBy: { providerId: string; model: string } | null = null
-    for await (const event of streamChat(
-      signedIn,
-      history,
-      chat.model,
-      chat.responseMode,
-      new AbortController().signal,
-    )) {
-      if (event.kind === 'delta') answer += event.content
-      if (event.kind === 'provider')
-        answeredBy = { providerId: event.providerId, model: event.model }
-      applyEvent(event, { setTurns, setProvider, setExhausted, setError })
-    }
-
-    if (conversationId !== null && answer.length > 0) {
-      await appendMessage(signedIn, conversationId, {
-        role: 'assistant',
-        content: answer,
-        ...(answeredBy ?? {}),
-      })
-    }
-
-    setBusy(false)
-    void loadSession().then(async (refreshed) => {
-      if (refreshed === null) return
+  const send = useSend({
+    session: signedIn,
+    tabId,
+    chat,
+    turns,
+    busy,
+    setTurns,
+    patchChat,
+    setBusy,
+    setError,
+    setExhausted,
+    setProvider,
+    setAttached,
+    onRefreshed: (refreshed, freshSavings) => {
       setSession(refreshed)
-      setSavings(await loadSavings(refreshed))
-    })
-  }, [busy, chat, patchChat, setTurns, signedIn, tabId, turns])
+      setSavings(freshSavings)
+    },
+  })
 
   if (session === undefined) return <div className="centered muted">Loading…</div>
   if (session === null) return <SignIn onSignedIn={setSession} />
@@ -145,15 +85,18 @@ export default function App() {
       patchChat({ pageMode: mode })
       return
     }
-    void requestPageAccess(tab.url).then((granted) => {
+    if (!isReadable(tab.url)) {
+      setError('Browser pages cannot be read by extensions.')
+      return
+    }
+
+    void requestPageAccess().then((granted) => {
       if (granted) {
         setError(null)
         patchChat({ pageMode: mode })
       } else {
         patchChat({ pageMode: 'off' })
-        setError(
-          `Without access to ${describeSite(tab.url)} the page cannot be read. Chrome asks once per site.`,
-        )
+        setError('Page reading needs access to websites. Chrome asks once, not per site.')
       }
     })
   }
@@ -169,30 +112,16 @@ export default function App() {
         onNewChat={startNewChat}
         onToggleSavings={() => setShowSavings((open) => !open)}
         onSignOut={() => void signOut().then(() => setSession(null))}
+        onClose={() => {
+          if (tabId !== null) void chrome.runtime.sendMessage({ type: 'close-panel', tabId })
+        }}
       />
 
       <MessageList turns={turns} busy={busy} logRef={log} />
 
       {showSavings && savings !== null && <SavingsPanel savings={savings} />}
 
-      {exhausted !== null && (
-        <div className="notice">
-          <strong>Today&apos;s free messages are used up.</strong>
-          <p className="muted" style={{ margin: '6px 0' }}>
-            Add a free key of your own and this cap stops applying.
-          </p>
-          {exhausted.map((item) => (
-            <div key={item.url}>
-              <a href={item.url} target="_blank" rel="noreferrer">
-                Get a free {item.label} key
-              </a>
-            </div>
-          ))}
-          <a href={`${SITE_URL}/dashboard/keys`} target="_blank" rel="noreferrer">
-            Then add it to your account
-          </a>
-        </div>
-      )}
+      {exhausted !== null && <ExhaustedNotice options={exhausted} />}
 
       {tabId === null && (
         <div className="notice">

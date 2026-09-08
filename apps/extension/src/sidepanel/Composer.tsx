@@ -1,8 +1,8 @@
 import { type ResponseMode, responseMode, responseModes } from '@zca/shared'
 import type { ModelOption } from '@/lib/models'
+import type { PageMode } from '@/lib/page-context'
 import type { Session } from '@/lib/session'
 import MicButton from './MicButton'
-import type { PageMode } from '@/lib/page-context'
 
 export default function Composer(props: {
   draft: string
@@ -21,76 +21,78 @@ export default function Composer(props: {
   session: Session
   onError: (message: string | null) => void
 }) {
-  const spec = responseMode(props.responseMode)
   return (
     <div className="composer">
-      <select
-        value={props.pageMode}
-        onChange={(event) => props.onPageMode(event.target.value as PageMode)}
-        aria-label="Page context"
-      >
-        <option value="off">Do not read the page</option>
-        <option value="text">Read this page (text)</option>
-        <option value="html">Read this page (HTML source)</option>
-      </select>
-
-      {props.showModelPicker && (
-        <select
-          value={props.model}
-          onChange={(event) => props.onModel(event.target.value)}
-          aria-label="Model"
-        >
-          <option value="auto">Automatic (first available)</option>
-          {props.models.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.providerLabel} · {option.label} · {Math.round(option.contextWindow / 1000)}k
-            </option>
-          ))}
-        </select>
-      )}
-
-      <div className="row">
-        <select
-          value={props.responseMode}
-          onChange={(event) => props.onResponseMode(event.target.value as ResponseMode)}
-          aria-label="Response length"
-          style={{ flex: 1 }}
-        >
-          {responseModes.map((mode) => (
-            <option key={mode.id} value={mode.id}>
-              {mode.label} — {mode.hint}
-            </option>
-          ))}
-        </select>
-        <span className="muted" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
-          ≤{spec.maxTokens}t
-        </span>
-      </div>
-
-      <textarea
-        rows={3}
-        value={props.draft}
-        placeholder="Ask something"
-        onChange={(event) => props.onDraft(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' && !event.shiftKey) {
-            event.preventDefault()
-            props.onSend()
-          }
-        }}
-      />
-
-      <div className="row">
+      <div className="inputrow">
+        <textarea
+          rows={2}
+          value={props.draft}
+          placeholder="Ask anything"
+          onChange={(event) => props.onDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+              event.preventDefault()
+              props.onSend()
+            }
+          }}
+        />
         <MicButton
           session={props.session}
           onText={(text) => props.onDraft(props.draft ? `${props.draft} ${text}` : text)}
           onError={props.onError}
         />
-        {props.attached !== null && <span className="muted attached">sent: {props.attached}</span>}
-        <span className="spacer" style={{ marginLeft: 'auto' }} />
-        <button type="button" className="primary" disabled={props.busy} onClick={props.onSend}>
-          Send
+        <button
+          type="button"
+          className="primary"
+          disabled={props.busy || props.draft.trim().length === 0}
+          onClick={props.onSend}
+          title="Send"
+        >
+          ↑
         </button>
+      </div>
+
+      <div className="controls">
+        <select
+          value={props.responseMode}
+          onChange={(event) => props.onResponseMode(event.target.value as ResponseMode)}
+          aria-label="Answer length"
+          title={`Caps the reply at ${responseMode(props.responseMode).maxTokens} tokens`}
+        >
+          {responseModes.map((mode) => (
+            <option key={mode.id} value={mode.id}>
+              {mode.label}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={props.pageMode}
+          onChange={(event) => props.onPageMode(event.target.value as PageMode)}
+          aria-label="Page context"
+        >
+          <option value="off">Page: off</option>
+          <option value="text">Page: text</option>
+          <option value="html">Page: HTML</option>
+        </select>
+
+        {props.showModelPicker && (
+          <select
+            value={props.model}
+            onChange={(event) => props.onModel(event.target.value)}
+            aria-label="Model"
+            style={{ maxWidth: 150 }}
+          >
+            <option value="auto">Auto</option>
+            {props.models.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {props.attached !== null && <span className="attached spacer">sent: {props.attached}</span>}
       </div>
     </div>
   )

@@ -449,3 +449,43 @@ everyone to carry two members nobody else implements would have been worse.
 const, which is built with the default base URL, so it ignored the
 `GROQ_BASE_URL` override that the chat path honours. It is now constructed in
 `router-deps` alongside the chat providers, from the same environment.
+
+## 26. The panel belongs to the tab it was opened on
+
+Decision 23 gave each tab its own panel document, but enabled the panel on every
+tab, so switching tabs kept a panel open — a different chat, unasked for.
+
+Now the global default is `enabled: false` and a tab is enabled only when the
+user opens the panel there, by clicking the toolbar icon, the keyboard shortcut
+or the context menu. Switch to a tab you never opened it on and Chrome closes
+the panel; switch back and it is still there. `openPanelOnActionClick` is off,
+because it opens the global panel everywhere and would defeat this — the click
+is handled directly instead.
+
+Which tab has it is visible in two places: a dot badge on the toolbar icon for
+that tab, and the tab's own title along the top of the panel. The header's ✕
+disables the panel for that tab and clears the badge.
+
+## 27. One permission prompt, not one per site
+
+Decision 22 asked for access per origin, which meant Chrome prompting on every
+new domain. The request is now a single one covering `http://*/*` and
+`https://*/*`, made the first time the user switches page reading on.
+
+There is no per-tab grant to ask for — Chrome's permission model is by origin,
+full stop — so the honest choice was between prompting constantly and prompting
+once. Nothing is granted at install either way: the patterns stay in
+`optional_host_permissions`, and `check-extension.mjs` fails the build if they
+move into `host_permissions`.
+
+## 28. The panel looks like a panel
+
+Three stacked full-width dropdowns above the input read as a settings form
+rather than a chat. The composer is now a bordered input row with the
+microphone and send inside it, and a single line of small controls beneath —
+answer length, page reading, model.
+
+Messages are bubbles: the user's aligned right in the accent tint, replies in
+bordered cards with the provider and model above them. The header carries
+status as pills, and the tab this chat belongs to sits on its own line under
+it. Verified in both light and dark against the built stylesheet.

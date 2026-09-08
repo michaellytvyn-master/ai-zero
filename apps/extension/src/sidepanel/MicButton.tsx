@@ -66,8 +66,8 @@ export default function MicButton(props: {
       type="button"
       onClick={() => void (state === 'recording' ? finish() : begin())}
       disabled={state === 'transcribing'}
+      className={state === 'recording' ? 'icon recording' : 'icon'}
       title={`Voice input, up to ${MAX_RECORDING_SECONDS} seconds`}
-      style={state === 'recording' ? { borderColor: 'var(--danger)', color: 'var(--danger)' } : {}}
     >
       {state === 'recording' ? '■' : state === 'transcribing' ? '…' : '🎙'}
     </button>

@@ -110,14 +110,16 @@ unreadable") does not say which folder it wanted. Open the side panel from the t
 Ctrl/Cmd+Shift+Y, and sign in — it opens this site's authorize page, so the web
 app must be running first.
 
-Reading the page is off until you turn it on, and the first time you do on a
-given site Chrome asks whether to allow it. The extension ships with access to
-no website at all — grants are per site and Chrome remembers them.
+Reading the page is off until you turn it on, and the first time you do Chrome
+asks once for access to websites. The extension ships with access to none —
+there is no per-tab grant in Chrome's permission model, so the choice was
+between asking on every new domain and asking once.
 
-Each tab gets its own panel. Not one panel that remembers several chats — a
-separate document per tab, so two tabs are two independent panels with their own
-state and their own in-flight request. Open a new tab and you get a fresh chat
-there while the first keeps going. The chats are stored on your account, so they
+Each tab gets its own panel, and only the tabs you opened it on have one. Click
+the toolbar icon on a tab and the panel opens there; a dot appears on the icon
+for that tab, and the panel names the tab it belongs to. Switch to a tab you
+never opened it on and the panel is simply not there; switch back and your chat
+is still running. The ✕ in the panel closes it for that tab alone. The chats are stored on your account, so they
 also show up on the site and survive closing the panel.
 
 Two modes, chosen automatically:

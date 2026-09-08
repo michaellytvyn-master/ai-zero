@@ -21,26 +21,52 @@ async function bindPanel(tabId: number, url: string | undefined): Promise<void> 
     .catch(() => undefined)
 }
 
-async function bindEveryTab(): Promise<void> {
-  for (const tab of await chrome.tabs.query({})) {
-    if (tab.id !== undefined) await bindPanel(tab.id, tab.url)
-  }
+/**
+ * The panel opens only on the tab the user opened it on, and stays there.
+ * Chrome would otherwise show it on every tab, so the global default is off and
+ * tabs are enabled one at a time.
+ */
+async function openOnTab(tabId: number, windowId: number, url: string | undefined): Promise<void> {
+  if (url !== undefined && /^(chrome|edge|about|devtools):/.test(url)) return
+  await bindPanel(tabId, url)
+  await markActive(tabId, true)
+  await chrome.sidePanel.open({ tabId, windowId })
+}
+
+/** The badge is how a tab shows it has the panel attached. */
+async function markActive(tabId: number, active: boolean): Promise<void> {
+  await chrome.action.setBadgeText({ tabId, text: active ? '●' : '' }).catch(() => undefined)
+  await chrome.action.setBadgeBackgroundColor({ tabId, color: '#2f5bd7' }).catch(() => undefined)
+  await chrome.action
+    .setTitle({ tabId, title: active ? 'Zero-Cost AI is open on this tab' : 'Open Zero-Cost AI' })
+    .catch(() => undefined)
+}
+
+async function resetPanels(): Promise<void> {
+  // Handling the click ourselves is what allows enabling one tab at a time;
+  // openPanelOnActionClick would open the global panel on every tab.
+  await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }).catch(() => undefined)
+  await chrome.sidePanel.setOptions({ enabled: false }).catch(() => undefined)
 }
 
 chrome.runtime.onInstalled.addListener(() => {
-  void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => undefined)
+  void resetPanels()
   chrome.contextMenus.create({ id: ASK_AI, title: 'Ask AI about "%s"', contexts: ['selection'] })
-  void bindEveryTab()
 })
 
-chrome.runtime.onStartup.addListener(() => void bindEveryTab())
+chrome.runtime.onStartup.addListener(() => void resetPanels())
 
-chrome.tabs.onCreated.addListener((tab) => {
-  if (tab.id !== undefined) void bindPanel(tab.id, tab.url)
+chrome.action.onClicked.addListener((tab) => {
+  if (tab.id === undefined || tab.windowId === undefined) return
+  void openOnTab(tab.id, tab.windowId, tab.url)
 })
 
+// Navigating keeps the panel on its tab; only the path is re-asserted.
 chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
-  if (change.url !== undefined || change.status === 'loading') void bindPanel(tabId, tab.url)
+  if (change.url === undefined) return
+  void chrome.action.getBadgeText({ tabId }).then((badge) => {
+    if (badge.length > 0) void bindPanel(tabId, tab.url)
+  })
 })
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
@@ -49,7 +75,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId !== ASK_AI || tabId === undefined || windowId === undefined) return
   void (async () => {
     await chrome.storage.session.set({ [`quote:${tabId}`]: info.selectionText ?? '' })
-    await chrome.sidePanel.open({ tabId, windowId })
+    await openOnTab(tabId, windowId, tab?.url)
   })()
 })
 
@@ -58,7 +84,7 @@ chrome.commands.onCommand.addListener((command) => {
   void (async () => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
     if (tab?.id !== undefined && tab.windowId !== undefined) {
-      await chrome.sidePanel.open({ tabId: tab.id, windowId: tab.windowId })
+      await openOnTab(tab.id, tab.windowId, tab.url)
     }
   })()
 })
@@ -66,6 +92,19 @@ chrome.commands.onCommand.addListener((command) => {
 /** A closed tab's chat binding is dead weight; the conversation itself stays. */
 chrome.tabs.onRemoved.addListener((tabId) => {
   void chrome.storage.session.remove([`tab:${tabId}`, `quote:${tabId}`])
+})
+
+/** Lets the panel turn itself off for its own tab. */
+chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
+  const request = message as { type?: string; tabId?: number } | null
+  const tabId = request?.tabId
+  if (request?.type !== 'close-panel' || typeof tabId !== 'number') return false
+  void (async () => {
+    await chrome.sidePanel.setOptions({ tabId, enabled: false }).catch(() => undefined)
+    await markActive(tabId, false)
+    sendResponse({ ok: true })
+  })()
+  return true
 })
 
 /**
