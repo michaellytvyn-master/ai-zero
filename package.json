@@ -17,7 +17,8 @@
     "test:watch": "vitest",
     "lint": "biome check .",
     "format": "biome check --write .",
-    "icons": "node scripts/make-icons.mjs"
+    "icons": "node scripts/make-icons.mjs",
+    "ext": "pnpm --filter @zca/extension build && node scripts/check-extension.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.12",

@@ -94,11 +94,19 @@ providers so no free-tier quota is spent. Modes are `stream`, `429`, `401`,
 ## The extension
 
 ```bash
-pnpm --filter @zca/extension build
+pnpm ext
 ```
 
-Then load `apps/extension/dist` at `chrome://extensions` with developer mode on
-and "Load unpacked". Open the side panel from the toolbar icon or with
+That builds it and checks it would load, then prints the exact path. At
+`chrome://extensions`, turn on developer mode, choose "Load unpacked", and pick
+
+```
+apps/extension/dist
+```
+
+**Not `apps/extension`** — that is the source. The manifest only exists in the
+build, and Chrome's complaint about it ("Manifest file is missing or
+unreadable") does not say which folder it wanted. Open the side panel from the toolbar icon or with
 Ctrl/Cmd+Shift+Y, and sign in — it opens this site's authorize page, so the web
 app must be running first.
 
@@ -207,6 +215,7 @@ pnpm typecheck     # tsc across every package
 pnpm test          # unit tests; integration tests skip without a database
 pnpm test:db       # everything, against postgres://localhost:5432/zca_dev
 pnpm icons         # regenerate the extension icons
+pnpm ext           # build the extension and verify Chrome could load it
 node scripts/check-env.mjs   # .env.example must cover every configured variable
 ```
 
