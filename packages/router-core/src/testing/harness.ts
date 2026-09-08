@@ -30,7 +30,8 @@ export function harness(
     cooldowns,
     deps: {
       providers,
-      keyFor: (provider) => (keyless.has(provider.id) ? null : `key-${provider.id}`),
+      keyFor: (provider) =>
+        keyless.has(provider.id) ? null : { key: `key-${provider.id}`, owner: 'user' as const },
       cooldowns,
       recordUsage: async (event) => {
         recorded.push(event)

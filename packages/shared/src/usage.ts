@@ -14,8 +14,10 @@ export const usageEventSchema = z.object({
   latencyMs: z.number().int().nonnegative(),
   status: z.number().int(),
   at: z.string().datetime(),
-  /** 'direct' means the extension called the provider with the user's own key. */
+  /** 'direct' means the extension called the provider itself, bypassing us. */
   source: z.enum(['router', 'direct']),
+  /** Whose quota paid: the signed-in user's key, or the shared demo pool. */
+  keyOwner: z.enum(['user', 'operator']),
 })
 
 export type UsageEvent = z.infer<typeof usageEventSchema>

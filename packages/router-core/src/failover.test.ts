@@ -97,7 +97,7 @@ describe('runFailover', () => {
         fakeProvider({ id: 'alpha', priority: 1, failWith: rateLimited('alpha', 5) }),
         fakeProvider({ id: 'beta', priority: 2 }),
       ],
-      keyFor: (p) => `key-${p.id}`,
+      keyFor: (p) => ({ key: `key-${p.id}`, owner: 'user' as const }),
       cooldowns,
       recordUsage: async () => {},
       firstTokenTimeoutMs: 5_000,

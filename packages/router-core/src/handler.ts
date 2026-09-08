@@ -156,7 +156,7 @@ async function bufferedResponse(
   )
 }
 
-function failureResponse(error: unknown): Response {
+export function failureResponse(error: unknown): Response {
   if (error instanceof ProviderAuthError) {
     return errorResponse(
       401,

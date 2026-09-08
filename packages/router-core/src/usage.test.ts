@@ -38,6 +38,7 @@ describe('usage recording', () => {
     expect(Object.keys(recorded[0] ?? {}).sort()).toEqual([
       'at',
       'inputTokens',
+      'keyOwner',
       'latencyMs',
       'model',
       'outputTokens',

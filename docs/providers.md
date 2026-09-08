@@ -67,3 +67,48 @@ checked, when, and against what. Re-check before touching an adapter.
 `cloudflare`, `gemini` and `openrouter` are unimplemented. Verify each against
 its own docs, and check its terms for proxying restrictions, before writing the
 adapter — same discipline as above.
+
+## Checked but not implemented
+
+Verified 2026-09-08, alongside the three above.
+
+### Cloudflare Workers AI — wanted, blocked on model ids
+
+- 10 000 neurons/day free, no card and no paid plan needed.
+  Source: <https://developers.cloudflare.com/workers-ai/platform/pricing/>
+- OpenAI-compatible base URL, so it can reuse `openAICompatible()`:
+  `https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/v1`, supporting
+  `/chat/completions`. The account id sits inside the URL, which is exactly
+  what the base-URL factory argument is for.
+  Source: <https://developers.cloudflare.com/workers-ai/configuration/open-ai-compatibility/>
+- **Not in the registry yet:** the model catalogue page does not expose the
+  `@cf/...` identifiers or per-model free-tier eligibility, and some models
+  (Kimi, GLM, DeepSeek variants) require a billing method. Constraint 4 says do
+  not guess, so this needs the ids read off the dashboard or the API before the
+  adapter ships.
+
+### Gemini — BYOK only, never the demo pool
+
+- Free tier across the Flash and Flash-Lite families, no card.
+  Source: <https://ai.google.dev/gemini-api/docs/pricing>
+- Exact RPM/RPD are no longer published per model; they are shown per project
+  in AI Studio. <https://ai.google.dev/gemini-api/docs/rate-limits>
+- **Terms block it for demo mode.** Google requires the paid tier once an API
+  client is made available to users in the EEA, Switzerland or the UK. A public
+  website is exactly that, so an operator key on the free tier would be in
+  breach the first time somebody in the EU used the demo.
+- Free-tier content is used to improve Google's products and may be reviewed by
+  humans. Stated on /privacy.
+
+### OpenRouter — weak, and terms unread
+
+- 50 requests/day on `:free` models without buying credits, 1 000/day after
+  spending $10, 20 RPM either way.
+  Source: <https://openrouter.ai/docs/api-reference/limits>
+- Terms have not been checked for proxying restrictions, so it stays out of the
+  operator pool until they are.
+
+### NVIDIA NIM — a trial, not a free tier
+
+- 100+ models, OpenAI-compatible, 40 RPM, no card, but roughly 1 000 signup
+  credits (5 000 maximum). Finite credit is a trial. Same category as Cerebras.

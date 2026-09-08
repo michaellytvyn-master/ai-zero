@@ -20,6 +20,7 @@ import {
   handleHealth,
   handleModels,
   type FailoverDeps,
+  type ProviderKey,
 } from '@zca/router-core'
 import type { UsageEvent } from '@zca/shared'
 
@@ -37,8 +38,10 @@ const providers: readonly Provider[] = [
   createCerebras(process.env['CEREBRAS_BASE_URL'] ?? CEREBRAS_BASE_URL),
 ].sort((a, b) => a.priority - b.priority)
 
-const keyFor = (provider: Provider): string | null =>
-  process.env[provider.keyEnvVar]?.trim() || null
+const keyFor = (provider: Provider): ProviderKey | null => {
+  const key = process.env[provider.keyEnvVar]?.trim()
+  return key ? { key, owner: 'operator' } : null
+}
 
 const deps: FailoverDeps = {
   providers,

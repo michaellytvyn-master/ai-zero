@@ -15,9 +15,14 @@ export type RouterEvent =
   | { readonly kind: 'usage'; readonly inputTokens: number; readonly outputTokens: number }
   | { readonly kind: 'stop'; readonly finishReason: string | null }
 
+export interface ProviderKey {
+  readonly key: string
+  readonly owner: 'user' | 'operator'
+}
+
 export interface FailoverDeps {
   readonly providers: readonly Provider[]
-  readonly keyFor: (provider: Provider) => string | null
+  readonly keyFor: (provider: Provider) => ProviderKey | null
   readonly cooldowns: CooldownStore
   readonly recordUsage: (event: UsageEvent) => Promise<void>
   readonly firstTokenTimeoutMs: number
@@ -39,8 +44,8 @@ export async function* runFailover(
       continue
     }
 
-    const key = deps.keyFor(provider)
-    if (key === null) {
+    const credential = deps.keyFor(provider)
+    if (credential === null) {
       attempts.push({ providerId: provider.id, reason: 'no_key', detail: provider.keyEnvVar })
       continue
     }
@@ -58,7 +63,9 @@ export async function* runFailover(
     let iterator: AsyncIterator<ChatChunk>
     let first: IteratorResult<ChatChunk>
     try {
-      iterator = provider.chat({ ...request, model }, key, controller.signal)[Symbol.asyncIterator]()
+      iterator = provider
+        .chat({ ...request, model }, credential.key, controller.signal)
+        [Symbol.asyncIterator]()
       first = await firstChunkWithin(iterator, deps.firstTokenTimeoutMs, controller)
     } catch (error) {
       signal.removeEventListener('abort', forwardAbort)
@@ -77,17 +84,30 @@ export async function* runFailover(
     // A chunk arrived. From here the client may receive bytes, so the spec
     // forbids switching provider: this attempt either finishes or fails hard.
     yield { kind: 'selected', providerId: provider.id, model }
-    yield* stream(deps, provider.id, model, iterator, first, startedAt, signal, forwardAbort)
+    yield* stream(
+      deps,
+      { providerId: provider.id, model, keyOwner: credential.owner },
+      iterator,
+      first,
+      startedAt,
+      signal,
+      forwardAbort,
+    )
     return
   }
 
   throw new AllProvidersFailedError(attempts)
 }
 
+interface Attempt {
+  readonly providerId: string
+  readonly model: string
+  readonly keyOwner: 'user' | 'operator'
+}
+
 async function* stream(
   deps: FailoverDeps,
-  providerId: string,
-  model: string,
+  attempt: Attempt,
   iterator: AsyncIterator<ChatChunk>,
   first: IteratorResult<ChatChunk>,
   startedAt: number,
@@ -115,15 +135,16 @@ async function* stream(
     }
   } catch (error) {
     status = error instanceof ProviderHttpError ? error.status : 500
-    throw new MidStreamError(providerId, messageOf(error))
+    throw new MidStreamError(attempt.providerId, messageOf(error))
   } finally {
     signal.removeEventListener('abort', forwardAbort)
     // A failing recorder must never take down a request the user already paid
     // for in latency; usage is telemetry, not part of the contract.
     await deps
       .recordUsage({
-        providerId,
-        model,
+        providerId: attempt.providerId,
+        model: attempt.model,
+        keyOwner: attempt.keyOwner,
         inputTokens,
         outputTokens,
         latencyMs: Math.max(0, Math.round(deps.now() - startedAt)),
