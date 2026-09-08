@@ -93,3 +93,52 @@ contain slashes (`openai/gpt-oss-20b`), which rules out `provider/model`.
 Each adapter is a factory taking a base URL that defaults to the verified
 value. §11 wants nothing hardcoded in logic, and it lets the failover chain be
 driven against local stubs without spending free-tier quota.
+
+## 10. Keys and chat history live in Postgres
+
+Supersedes decision 1's split and hard constraint 1's storage rule.
+
+- A user adds provider keys in their account panel on the site. Keys are
+  **encrypted at rest in Postgres** (AES-256-GCM) and synced to every device
+  and to the extension. localStorage was rejected: it cannot follow the user
+  to a second machine.
+- The encryption key comes from `KEY_ENCRYPTION_KEY` in the environment and is
+  never stored in the database. A database dump alone must not yield anyone's
+  provider credentials.
+- Plaintext keys exist only in memory for the duration of one request, and are
+  still never logged.
+- **Chat history is stored server-side**, per user, and shown in their own
+  account panel.
+
+Hard constraint 3 still holds where it was aimed: operational logs and the
+admin dashboard carry provider, model, token counts, latency, status and
+timestamp, and no message content. A user's own conversations are product data
+they own and can delete, not telemetry.
+
+`/privacy` must be rewritten. It can no longer claim keys stay on the device or
+that prompts are never stored. It must say: conversations are saved to your
+account, keys are encrypted at rest, and free provider tiers may train on
+submitted content.
+
+## 11. The web app is the primary surface, and ships first
+
+The site is a full ChatGPT-style chat behind sign-in, not only the capped demo
+of SPEC.md §10. The extension authenticates through the site, so SPEC.md §12's
+order is reversed: web app foundation (auth, Postgres, key vault, chat) before
+the extension.
+
+Demo mode's 10-per-day cap still applies to operator keys. A user with their
+own key is not billed against the pool.
+
+## 12. Free provider pool, verified 2026-09-08
+
+Operator keys: **Mistral, Groq, Cloudflare Workers AI** — all free with no card
+and no geographic restriction on serving end users.
+
+Excluded from the operator pool, available as BYOK:
+
+- **Gemini** — Google's terms require a paid tier once the app is available to
+  users in the EEA, Switzerland or the UK, which a public site is.
+- **OpenRouter** — 50 requests/day without buying credits; terms unverified.
+- **Cerebras** — no longer free (see docs/providers.md).
+- **NVIDIA NIM** — finite signup credits, so a trial rather than a free tier.
