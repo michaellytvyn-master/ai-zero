@@ -50,9 +50,8 @@ export default function LandingPage() {
         </tbody>
       </table>
       <p className="muted" style={{ fontSize: 13 }}>
-        Limits verified 2026-09-08. Every provider here is free without a credit card. Mistral
-        additionally asks for phone verification and, on its free tier, for permission to train on
-        submitted content.
+        Limits verified 2026-09-08. Every provider here is free without a credit card. Providers
+        that ask for a payment method are not listed, however good they are.
       </p>
     </main>
   )

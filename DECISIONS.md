@@ -223,3 +223,44 @@ enforced rather than remembered.
 Cloudflare's credential is two values because its account id sits inside the
 URL. The adapter takes `<account id>:<api token>` and splits it, keeping the
 special case in one file instead of widening the Provider interface.
+
+## 17. Configuration is validated in slices, not all at once
+
+The first version parsed every environment variable on the first call to
+`config()`, and `db()` called it. A missing `AUTH_GOOGLE_ID` therefore took down
+the landing page, the privacy page and everything else, with a stack trace
+rather than an explanation. That was wrong: the landing page needs neither
+Google nor a database.
+
+Configuration is now five independent slices — database, session secret, Google
+credentials, key vault, runtime tuning and operator keys — each parsed on first
+use by whatever needs it. Three consequences:
+
+- The site runs with only `DATABASE_URL` set. `/signin` explains what is
+  missing instead of the app crashing.
+- Reading an existing session needs `AUTH_SECRET` and a database. Only
+  *starting* one needs the Google credentials, so reconfiguring sign-in does
+  not log everyone out.
+- `scripts/check-env.mjs` fails the build when `.env.example` stops covering
+  the schema, which is how the missing `CF_*` entries were found.
+
+## 18. Twelve models, picked per message
+
+Groq and Cloudflare each expose several free models, so all of them are
+offered rather than one per provider. `listModels()` returns them qualified as
+`provider:model`, grouped by provider.
+
+The picker sits next to the composer on both surfaces. Because history lives in
+the database and not in the model, changing the selection mid-conversation just
+works: the next reply comes from the new model with the full prior context, and
+each stored message records which provider and model produced it. Reopening a
+conversation preselects whatever answered last.
+
+The reply is labelled with the provider that *actually* answered, which can
+differ from the pick when that provider was rate limited and failover stepped
+in.
+
+This also closed a gap in hard constraint 2, which requires the shared demo
+pool to use the smallest model only. It was never enforced. `effectiveModel()`
+now clamps demo requests to `smallestFreeModelId()`, and the picker is disabled
+with an explanation for users who have not added a key.

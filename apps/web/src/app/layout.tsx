@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { auth } from '@/auth'
+import { safeAuth } from '@/auth'
 import { isAdmin } from '@/config'
 import './globals.css'
 
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth()
+  const session = await safeAuth()
   const email = session?.user?.email ?? null
 
   return (
@@ -38,7 +38,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   )
 }
 
-/** The layout renders before env is guaranteed, so a config throw must not 500. */
+/** Runtime config has defaults for everything, but a bad value must not 500. */
 function isAdminSafe(email: string | null): boolean {
   try {
     return isAdmin(email)

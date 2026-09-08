@@ -1,5 +1,5 @@
 import { notFound, redirect } from 'next/navigation'
-import { auth } from '@/auth'
+import { safeAuth } from '@/auth'
 import { isAdmin } from '@/config'
 import { formatUsd, referenceModel, savingsFrom } from '@zca/pricing'
 import { dailyRows, providerRows, userRows } from '@/lib/admin'
@@ -8,7 +8,7 @@ import { usageTotalsForEveryone } from '@/lib/savings'
 export const dynamic = 'force-dynamic'
 
 export default async function AdminPage() {
-  const session = await auth()
+  const session = await safeAuth()
   const email = session?.user?.email
   if (typeof email !== 'string') redirect('/signin')
   // 404 rather than 403: a non-admin should not learn the page exists.

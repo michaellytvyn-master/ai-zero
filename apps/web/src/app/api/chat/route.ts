@@ -1,14 +1,14 @@
 import { z } from 'zod'
 import { failureResponse, runFailover, type RouterEvent } from '@zca/router-core'
 import { UnauthenticatedError, requireUser } from '@/auth'
-import { config } from '@/config'
+import { runtimeConfig } from '@/config'
 import {
   appendMessage,
   createConversation,
   loadConversation,
   toChatMessages,
 } from '@/lib/conversations'
-import { buildRouterContext } from '@/lib/router-deps'
+import { buildRouterContext, effectiveModel } from '@/lib/router-deps'
 import { demoExhaustedResponse, unauthenticatedResponse } from '@/lib/responses'
 import { claimDemoMessage } from '@/lib/usage'
 
@@ -42,7 +42,7 @@ export async function POST(request: Request): Promise<Response> {
     if (!usingOwnKeys) {
       const allowance = await claimDemoMessage(user.id)
       if (!allowance.allowed) {
-        return demoExhaustedResponse(config().DEMO_MESSAGES_PER_ACCOUNT_PER_DAY)
+        return demoExhaustedResponse(runtimeConfig().DEMO_MESSAGES_PER_ACCOUNT_PER_DAY)
       }
     }
 
@@ -51,7 +51,7 @@ export async function POST(request: Request): Promise<Response> {
     const events = runFailover(
       deps,
       {
-        model: parsed.data.model,
+        model: effectiveModel(parsed.data.model, usingOwnKeys),
         messages: [...history, { role: 'user', content: parsed.data.content }],
         temperature: null,
         maxTokens: null,

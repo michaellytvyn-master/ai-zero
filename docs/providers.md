@@ -13,31 +13,12 @@ that it costs nothing, and a card is the point at which that stops being true.
 `registry.test.ts` asserts every shipped model is on a free tier, so a
 card-only provider cannot be added by accident.
 
-| Provider | Card | Other friction | Free allowance |
+| Provider | Card | Free allowance | Models offered |
 |---|---|---|---|
-| Mistral | no | phone verification, must opt in to training | ~1B tokens/month |
-| Groq | no | none | 1 000 requests/day |
-| Cloudflare Workers AI | no | none | 10 000 neurons/day |
+| Groq | no | 1 000 requests/day | 6 |
+| Cloudflare Workers AI | no | 10 000 neurons/day | 6 |
 
-## Mistral — priority 10
-
-- Base URL `https://api.mistral.ai/v1`, OpenAI-shaped `/chat/completions`,
-  `stream: true`, terminated by `data: [DONE]`.
-  Source: <https://docs.mistral.ai/api/>
-- Free **Experiment** tier: no billing card, ~1B tokens/month, evaluation only.
-  Per-workspace limits are at <https://admin.mistral.ai/plateforme/limits>.
-- **Two caveats, both surfaced in the UI.** It requires phone verification, and
-  the free tier requires opting in to having your content used for training.
-  `/privacy` states the second one.
-- Model ids shipped: `ministral-3-8b-2512`, `ministral-3-14b-2512` (256K context).
-  Source: <https://docs.mistral.ai/getting-started/models/models_overview/>
-- SPEC.md and most tutorials still name `mistral-small-2603` and
-  `open-mistral-7b`. Both are **deprecated** — do not add them back.
-- Terms: a "Customer Offering" serving End Users is permitted; buying, selling
-  or transferring API keys is not. Demo mode fits; key-sharing never would.
-  Source: <https://legal.mistral.ai/terms/commercial-terms-of-service>
-
-## Groq — priority 20
+## Groq — priority 10
 
 - Base URL `https://api.groq.com/openai/v1`, fully OpenAI-compatible, honours
   `stream_options.include_usage`.
@@ -45,18 +26,22 @@ card-only provider cannot be added by accident.
   8 000 TPM, 200 000 TPD. Limits are per organisation, so extra keys do not
   multiply quota. 429 carries `retry-after` plus `x-ratelimit-*`.
   Source: <https://console.groq.com/docs/rate-limits>
-- Model ids shipped: `openai/gpt-oss-20b`, `openai/gpt-oss-120b` (131 072 context).
-  Note the slash inside the id — this is why qualified ids use `provider:model`.
+- Model ids shipped — every chat model that appears in Groq's free-plan rate
+  limit table, and nothing that does not:
+  `openai/gpt-oss-120b` and `openai/gpt-oss-20b` (131 072),
+  `qwen/qwen3.8-27b` (131 042), `qwen/qwen3.6-27b` (131 072),
+  `groq/compound` and `groq/compound-mini` (131 072, web search built in).
+  Note the slash inside the ids — this is why qualified ids use `provider:model`.
   Source: <https://console.groq.com/docs/models>
-- `qwen/qwen3.6-27b` and `qwen/qwen3.8-27b` are also free but their context
-  windows were not verified, so they are not in the registry.
+- `llama-3.1-8b-instant` and `llama-3.3-70b-versatile` appear in the catalogue
+  but not in the free-plan table, so they are deliberately absent.
 - SPEC.md assumed `llama-3.3-70b-versatile`; it is not in the current catalogue.
 - Terms: Services Agreement 3.1 grants the right "to make the Cloud Services
   and AI Model Services available to End Users through your Customer
   Applications". 3.2 and 6.3(c) forbid reselling or transferring access.
   Source: <https://console.groq.com/docs/legal/services-agreement>
 
-## Cloudflare Workers AI — priority 30
+## Cloudflare Workers AI — priority 20
 
 - OpenAI-compatible base URL
   `https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/v1`, serving
@@ -69,10 +54,15 @@ card-only provider cannot be added by accident.
   pastes into the account panel, and what `CF_ACCOUNT_ID` + `CF_API_TOKEN`
   compose to for the operator pool. The oddity is contained in `cloudflare.ts`
   rather than widening the Provider interface for everyone.
-- Model ids shipped, all outside Cloudflare's paid-billing list:
-  - `@cf/openai/gpt-oss-120b` — 128 000 context
-  - `@cf/meta/llama-3.3-70b-instruct-fp8-fast` — 24 000 context
-  - `@cf/meta/llama-3.1-8b-instruct` — 7 968 context
+- Model ids shipped, all outside Cloudflare's paid-billing list, contexts read
+  from each model's own page:
+  - `@cf/openai/gpt-oss-120b` — 128 000
+  - `@cf/mistralai/mistral-small-3.1-24b-instruct` — 128 000
+  - `@cf/meta/llama-3.2-3b-instruct` — 80 000
+  - `@cf/meta/llama-3.3-70b-instruct-fp8-fast` — 24 000
+  - `@cf/qwen/qwq-32b` — 24 000
+  - `@cf/meta/llama-3.1-8b-instruct` — 7 968 (the smallest, so the demo pool
+    is clamped to it)
 - **Requires a payment method, so never add these:** `@cf/moonshotai/kimi-k2.6`,
   `@cf/moonshotai/kimi-k2.7-code`, `@cf/zai-org/glm-5.2`, `@cf/zai-org/glm-5.3`,
   `@cf/zai-org/glm-5.3-flash`, `@cf/deepseek-ai/deepseek-v4-flash-0731`,
@@ -84,6 +74,19 @@ card-only provider cannot be added by accident.
   Source: <https://www.cloudflare.com/service-specific-terms-developer-platform/>
 
 ## Removed
+
+### Mistral — removed 2026-09-08, no free models visible in the console
+
+Its documentation and every aggregator still describe a free Experiment tier
+with ~1B tokens/month and no credit card, gated behind phone verification and
+an opt-in to training on submitted content. The operator checked the actual
+console and found no free models offered, which beats what the docs claim.
+Removed rather than left in as a provider that silently never answers.
+
+If it comes back, the adapter is four lines of configuration over
+`openAICompatible()`; the model ids at the time of removal were
+`ministral-3-8b-2512` and `ministral-3-14b-2512`, both 256K context, and
+`mistral-small-2603` and `open-mistral-7b` were already deprecated.
 
 ### Cerebras — removed 2026-09-08, requires a card
 

@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { auth } from '@/auth'
+import { safeAuth } from '@/auth'
 import { issueExtensionToken } from '@/lib/extension-auth'
 
 export const dynamic = 'force-dynamic'
@@ -31,7 +31,7 @@ export default async function AuthorizeExtensionPage({
     )
   }
 
-  const session = await auth()
+  const session = await safeAuth()
   const userId = session?.user?.id
   if (typeof userId !== 'string') {
     const target = `/extension/authorize?redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(state ?? '')}`

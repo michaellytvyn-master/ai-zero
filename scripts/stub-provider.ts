@@ -2,7 +2,7 @@
  * Phase 1 only: fake OpenAI-compatible endpoints, so the failover chain can be
  * driven over real HTTP without burning anyone's free-tier quota.
  *
- * STUB_SPEC="9001:429:mistral,9002:stream:groq"
+ * STUB_SPEC="9001:429:groq,9002:stream:cloudflare"
  */
 import { createServer, type ServerResponse } from 'node:http'
 

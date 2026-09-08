@@ -1,5 +1,5 @@
 import { handleChatCompletions } from '@zca/router-core'
-import { config } from '@/config'
+import { runtimeConfig } from '@/config'
 import { buildRouterContext } from '@/lib/router-deps'
 import { demoExhaustedResponse, unauthenticatedResponse } from '@/lib/responses'
 import { resolveUser } from '@/lib/request-user'
@@ -21,7 +21,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!usingOwnKeys) {
     const allowance = await claimDemoMessage(user.id)
     if (!allowance.allowed) {
-      return demoExhaustedResponse(config().DEMO_MESSAGES_PER_ACCOUNT_PER_DAY)
+      return demoExhaustedResponse(runtimeConfig().DEMO_MESSAGES_PER_ACCOUNT_PER_DAY)
     }
   }
 

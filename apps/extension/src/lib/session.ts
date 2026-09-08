@@ -7,7 +7,7 @@ export interface ProviderInfo {
   readonly signupUrl: string
   readonly credentialHint: string
   readonly baseUrl: string
-  readonly models: { id: string; label: string }[]
+  readonly models: { id: string; label: string; contextWindow: number }[]
   /** The user's own key, or null when they have not added one for this provider. */
   readonly key: string | null
 }

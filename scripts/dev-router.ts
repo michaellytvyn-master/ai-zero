@@ -8,10 +8,8 @@ import { Readable } from 'node:stream'
 import {
   CLOUDFLARE_API_ROOT,
   GROQ_BASE_URL,
-  MISTRAL_BASE_URL,
   createCloudflare,
   createGroq,
-  createMistral,
   type Provider,
 } from '@zca/providers'
 import {
@@ -33,12 +31,18 @@ const config = {
 // Base URLs default to the values verified against each provider's docs; the
 // override exists so the failover can be driven against local stubs.
 const providers: readonly Provider[] = [
-  createMistral(process.env.MISTRAL_BASE_URL ?? MISTRAL_BASE_URL),
   createGroq(process.env.GROQ_BASE_URL ?? GROQ_BASE_URL),
   createCloudflare(process.env.CLOUDFLARE_API_ROOT ?? CLOUDFLARE_API_ROOT),
 ].sort((a, b) => a.priority - b.priority)
 
 const keyFor = (provider: Provider): ProviderKey | null => {
+  // Cloudflare puts the account id in the URL, so its credential is a pair.
+  if (provider.id === 'cloudflare') {
+    const accountId = process.env.CF_ACCOUNT_ID?.trim()
+    const token = process.env.CF_API_TOKEN?.trim()
+    return accountId && token ? { key: `${accountId}:${token}`, owner: 'operator' } : null
+  }
+
   const key = process.env[provider.keyEnvVar]?.trim()
   return key ? { key, owner: 'operator' } : null
 }

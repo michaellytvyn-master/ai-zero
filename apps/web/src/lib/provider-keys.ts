@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm'
-import { config } from '../config'
+import { vaultConfig } from '../config'
 import { db } from '../db'
 import { providerKeys } from '../db/schema'
 import { decryptSecret, encryptSecret, keyHint } from './crypto'
@@ -38,7 +38,7 @@ export async function saveProviderKey(
   const row = {
     userId,
     providerId,
-    secret: encryptSecret(trimmed, config().KEY_ENCRYPTION_KEY),
+    secret: encryptSecret(trimmed, vaultConfig().KEY_ENCRYPTION_KEY),
     hint: keyHint(trimmed),
   }
 
@@ -67,7 +67,7 @@ export async function decryptedKeys(userId: string): Promise<ReadonlyMap<string,
     .from(providerKeys)
     .where(eq(providerKeys.userId, userId))
 
-  const encryptionKey = config().KEY_ENCRYPTION_KEY
+  const encryptionKey = vaultConfig().KEY_ENCRYPTION_KEY
   const decrypted = new Map<string, string>()
   for (const row of rows) {
     try {

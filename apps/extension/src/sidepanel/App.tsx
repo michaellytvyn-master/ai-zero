@@ -4,11 +4,12 @@ import type { ChatMessage } from '@zca/shared'
 import { streamChat, usesOwnKeys, type ChatEvent } from '@/lib/chat'
 import { SITE_URL } from '@/lib/config'
 import { asQuotedContext, readActivePage } from '@/lib/page-context'
+import { pickableModels } from '@/lib/models'
 import { loadSavings } from '@/lib/savings'
 import { loadSession, signOut, startSignIn, type Session } from '@/lib/session'
 import SavingsPanel from './SavingsPanel'
 
-type Turn = { id: string; role: 'user' | 'assistant'; content: string }
+type Turn = { id: string; role: 'user' | 'assistant'; content: string; answeredBy?: string }
 type Exhausted = { label: string; url: string }[]
 
 export default function App() {
@@ -20,6 +21,7 @@ export default function App() {
   const [exhausted, setExhausted] = useState<Exhausted | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [savings, setSavings] = useState<Savings | null>(null)
+  const [model, setModel] = useState('auto')
   const [showSavings, setShowSavings] = useState(false)
   const log = useRef<HTMLDivElement>(null)
 
@@ -63,7 +65,7 @@ export default function App() {
     ])
 
     const controller = new AbortController()
-    for await (const event of streamChat(session, history, 'auto', controller.signal)) {
+    for await (const event of streamChat(session, history, model, controller.signal)) {
       applyEvent(event, { setTurns, setProvider, setExhausted, setError })
     }
 
@@ -73,7 +75,7 @@ export default function App() {
       setSession(refreshed)
       setSavings(await loadSavings(refreshed))
     })
-  }, [busy, draft, session, turns])
+  }, [busy, draft, model, session, turns])
 
   async function addPageContext() {
     try {
@@ -183,6 +185,20 @@ export default function App() {
       {error !== null && <div className="notice bad">{error}</div>}
 
       <div className="composer">
+        {ownKeys && (
+          <select
+            value={model}
+            onChange={(event) => setModel(event.target.value)}
+            aria-label="Model"
+          >
+            <option value="auto">Automatic (first available)</option>
+            {pickableModels(session).map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.providerLabel} · {option.label} · {Math.round(option.contextWindow / 1000)}k
+              </option>
+            ))}
+          </select>
+        )}
         <textarea
           rows={3}
           value={draft}
@@ -218,8 +234,17 @@ function applyEvent(
     setError: (value: string) => void
   },
 ): void {
-  if (event.kind === 'provider') setters.setProvider(event.providerId)
-  else if (event.kind === 'delta') {
+  if (event.kind === 'provider') {
+    setters.setProvider(event.providerId)
+    setters.setTurns((previous) => {
+      const last = previous[previous.length - 1]
+      if (last === undefined) return previous
+      return [
+        ...previous.slice(0, -1),
+        { ...last, answeredBy: `${event.providerId} · ${event.model}` },
+      ]
+    })
+  } else if (event.kind === 'delta') {
     setters.setTurns((previous) => {
       const last = previous[previous.length - 1]
       if (last === undefined) return previous

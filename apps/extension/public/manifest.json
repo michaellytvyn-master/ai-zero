@@ -8,7 +8,6 @@
   "host_permissions": [
     "http://localhost:3000/*",
     "https://api.groq.com/*",
-    "https://api.mistral.ai/*",
     "https://api.cloudflare.com/*"
   ],
   "background": {

@@ -1,6 +1,6 @@
 import { and, eq, sql } from 'drizzle-orm'
 import type { UsageEvent } from '@zca/shared'
-import { config } from '../config'
+import { runtimeConfig } from '../config'
 import { db } from '../db'
 import { demoUsage, usageEvents } from '../db/schema'
 
@@ -33,7 +33,7 @@ export interface DemoAllowance {
  * read-then-write check would allow.
  */
 export async function claimDemoMessage(userId: string): Promise<DemoAllowance> {
-  const limit = config().DEMO_MESSAGES_PER_ACCOUNT_PER_DAY
+  const limit = runtimeConfig().DEMO_MESSAGES_PER_ACCOUNT_PER_DAY
   const claimed = await db().execute(sql`
     insert into ${demoUsage} (user_id, day, count)
     values (${userId}, current_date, 1)
@@ -49,7 +49,7 @@ export async function claimDemoMessage(userId: string): Promise<DemoAllowance> {
 }
 
 export async function demoRemaining(userId: string): Promise<DemoAllowance> {
-  const limit = config().DEMO_MESSAGES_PER_ACCOUNT_PER_DAY
+  const limit = runtimeConfig().DEMO_MESSAGES_PER_ACCOUNT_PER_DAY
   const rows = await db()
     .select({ count: demoUsage.count })
     .from(demoUsage)

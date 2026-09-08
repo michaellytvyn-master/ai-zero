@@ -119,26 +119,27 @@ The icons in `public/icons` are flat placeholder squares. Phase 7 replaces them.
 Verified 2026-09-08. Full sources and caveats in
 [docs/providers.md](docs/providers.md) — the figures in SPEC.md are stale.
 
-| Provider | Priority | Card needed | Verified free allowance |
-|---|---|---|---|
-| Mistral | 10 | no | ~1B tokens/month, Experiment tier |
-| Groq | 20 | no | 30 RPM, 1 000 req/day, 200K tokens/day |
-| Cloudflare Workers AI | 30 | no | 10 000 neurons/day |
+| Provider | Priority | Card needed | Verified free allowance | Models |
+|---|---|---|---|---|
+| Groq | 10 | no | 30 RPM, 1 000 req/day, 200K tokens/day | 6 |
+| Cloudflare Workers AI | 20 | no | 10 000 neurons/day | 6 |
 
-Nothing that needs a credit card ships. Cerebras was removed on 2026-09-08 when
-it retired its no-card tier, and a test asserts every registered model is on a
-free tier so one cannot creep back in.
-
-Mistral has two caveats worth knowing before you use it: it asks for phone
-verification, and its free tier requires opting in to training on submitted
-content. Both are stated on `/privacy`.
+Nothing that needs a credit card ships, and a test asserts every registered
+model is on a free tier so one cannot creep back in. Cerebras was removed when
+it retired its no-card tier; Mistral when its console stopped offering free
+models. Both are documented in [docs/providers.md](docs/providers.md).
 
 Cloudflare's credential is two values, `<account id>:<api token>`, because the
 account id is part of its URL.
 
-Mistral's and Groq's terms explicitly permit serving end users through your own
-application and forbid transferring keys to them; Cloudflare's do not restrict
-it. Demo mode is the former; it is never the latter.
+Twelve models in total, and you pick which one answers. The choice is per
+message, so you can continue an existing conversation on a different model —
+the history lives in the database, not in the model. On the shared demo pool
+the smallest model is used, per SPEC.md's cap.
+
+Groq's terms explicitly permit serving end users through your own application
+and forbid transferring keys to them; Cloudflare's do not restrict it. Demo
+mode is the former; it is never the latter.
 
 ## The savings counter
 

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { formatUsd, referenceModel, referenceModels, savingsFrom } from '@zca/pricing'
-import { auth } from '@/auth'
+import { safeAuth } from '@/auth'
 import { usageTotalsForUser } from '@/lib/savings'
 
 export const dynamic = 'force-dynamic'
@@ -11,7 +11,7 @@ export default async function SavingsPage({
 }: {
   searchParams: Promise<{ model?: string }>
 }) {
-  const session = await auth()
+  const session = await safeAuth()
   const userId = session?.user?.id
   if (typeof userId !== 'string') redirect('/signin')
 

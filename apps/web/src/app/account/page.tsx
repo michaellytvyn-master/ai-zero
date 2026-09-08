@@ -1,13 +1,13 @@
 import { redirect } from 'next/navigation'
 import { orderedProviders } from '@zca/providers'
-import { auth } from '@/auth'
+import { safeAuth } from '@/auth'
 import KeysClient from '@/components/keys-client'
 import { listProviderKeys } from '@/lib/provider-keys'
 
 export const dynamic = 'force-dynamic'
 
 export default async function AccountPage() {
-  const session = await auth()
+  const session = await safeAuth()
   const userId = session?.user?.id
   if (typeof userId !== 'string') redirect('/signin')
 

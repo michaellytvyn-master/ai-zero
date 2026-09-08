@@ -1,22 +1,20 @@
 import {
   CLOUDFLARE_API_ROOT,
+  smallestFreeModelId,
   GROQ_BASE_URL,
-  MISTRAL_BASE_URL,
   createCloudflare,
   createGroq,
-  createMistral,
   type Provider,
 } from '@zca/providers'
 import type { FailoverDeps, ProviderKey } from '@zca/router-core'
 import type { UsageEvent } from '@zca/shared'
-import { config } from '../config'
+import { operatorKeys, runtimeConfig } from '../config'
 import { PostgresCooldownStore } from './cooldowns'
 import { decryptedKeys } from './provider-keys'
 import { recordUsage } from './usage'
 
 export function allProviders(): readonly Provider[] {
   return [
-    createMistral(process.env.MISTRAL_BASE_URL ?? MISTRAL_BASE_URL),
     createGroq(process.env.GROQ_BASE_URL ?? GROQ_BASE_URL),
     createCloudflare(process.env.CLOUDFLARE_API_ROOT ?? CLOUDFLARE_API_ROOT),
   ].sort((a, b) => a.priority - b.priority)
@@ -27,12 +25,12 @@ function operatorKey(provider: Provider): string | null {
   // id is part of the URL. The adapter takes them joined by a colon, which is
   // also the form a user pastes into the account panel.
   if (provider.id === 'cloudflare') {
-    const accountId = config().CF_ACCOUNT_ID?.trim()
-    const token = config().CF_API_TOKEN?.trim()
+    const accountId = operatorKeys().CF_ACCOUNT_ID?.trim()
+    const token = operatorKeys().CF_API_TOKEN?.trim()
     return accountId && token ? `${accountId}:${token}` : null
   }
 
-  const env = config() as unknown as Record<string, string | undefined>
+  const env = operatorKeys() as unknown as Record<string, string | undefined>
   return env[provider.keyEnvVar]?.trim() || null
 }
 
@@ -71,9 +69,20 @@ export async function buildRouterContext(
       keyFor,
       cooldowns: new PostgresCooldownStore(),
       recordUsage: (event) => recordUsage(userId, { ...event, source }),
-      firstTokenTimeoutMs: config().FIRST_TOKEN_TIMEOUT_MS,
-      cooldownSeconds: config().PROVIDER_COOLDOWN_SECONDS,
+      firstTokenTimeoutMs: runtimeConfig().FIRST_TOKEN_TIMEOUT_MS,
+      cooldownSeconds: runtimeConfig().PROVIDER_COOLDOWN_SECONDS,
       now: Date.now,
     },
   }
+}
+
+/**
+ * Hard constraint 2: the shared demo pool runs the smallest model only, so one
+ * visitor cannot spend the whole day's allowance on the largest one. A user on
+ * their own keys picks whatever they like.
+ */
+export function effectiveModel(requested: string, usingOwnKeys: boolean): string {
+  if (usingOwnKeys) return requested
+  const configured = runtimeConfig().DEMO_MODEL
+  return configured === 'auto' ? smallestFreeModelId() : configured
 }

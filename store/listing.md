@@ -67,7 +67,7 @@ Reviewers read these. Each one names the feature that stops working without it.
 
 | Origin | Why it is needed |
 |---|---|
-| `https://api.groq.com/*`, `https://api.mistral.ai/*`, `https://api.cloudflare.com/*` | When the user has added their own key, chat requests are sent directly to that provider from the browser. This is what keeps the key out of any intermediary. |
+| `https://api.groq.com/*`, `https://api.cloudflare.com/*` | When the user has added their own key, chat requests are sent directly to that provider from the browser. This is what keeps the key out of any intermediary. |
 | The extension's own website origin | Sign-in, syncing the user's keys and conversations, and reporting usage counts. Replace `http://localhost:3000/*` with the production origin before publishing. |
 
 There is no `<all_urls>` permission and none is requested.

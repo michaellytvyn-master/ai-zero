@@ -1,4 +1,4 @@
-import { auth } from '../auth'
+import { safeAuth } from '../auth'
 import { bearerToken, userForExtensionToken, type ExtensionUser } from './extension-auth'
 
 /**
@@ -9,7 +9,7 @@ export async function resolveUser(request: Request): Promise<ExtensionUser | nul
   const token = bearerToken(request)
   if (token !== null) return userForExtensionToken(token)
 
-  const session = await auth()
+  const session = await safeAuth()
   const id = session?.user?.id
   const email = session?.user?.email
   if (typeof id !== 'string' || typeof email !== 'string') return null

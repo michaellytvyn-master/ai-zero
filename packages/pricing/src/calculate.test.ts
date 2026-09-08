@@ -47,7 +47,7 @@ describe('microUsdFor', () => {
 describe('savingsFrom', () => {
   const totals = [
     { providerId: 'groq', requests: 3, inputTokens: 3000, outputTokens: 1500 },
-    { providerId: 'mistral', requests: 1, inputTokens: 1000, outputTokens: 500 },
+    { providerId: 'cloudflare', requests: 1, inputTokens: 1000, outputTokens: 500 },
   ]
 
   it('adds the per-provider figures up to the headline total', () => {
@@ -62,7 +62,7 @@ describe('savingsFrom', () => {
   it('orders the breakdown by what each provider saved', () => {
     expect(savingsFrom(totals, model).byProvider.map((row) => row.providerId)).toEqual([
       'groq',
-      'mistral',
+      'cloudflare',
     ])
   })
 

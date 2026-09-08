@@ -57,12 +57,12 @@ describeDb('savings from recorded usage', () => {
     const userId = await makeUser()
     await record(userId, 'groq', 1000, 500)
     await record(userId, 'groq', 1000, 500)
-    await record(userId, 'mistral', 2000, 1000)
+    await record(userId, 'cloudflare', 2000, 1000)
 
     const savings = savingsFrom(await usageTotalsForUser(userId), referenceModel('gpt-5-mini'))
 
     // groq: 2000 in, 1000 out -> 2000*0.25 + 1000*2.00 = 2500 micro-dollars
-    // mistral: 2000 in, 1000 out -> the same 2500
+    // cloudflare: 2000 in, 1000 out -> the same 2500
     expect(savings.byProvider.map((row) => row.microUsd)).toEqual([2500, 2500])
     expect(savings.microUsd).toBe(5000)
     expect(savings.requests).toBe(3)

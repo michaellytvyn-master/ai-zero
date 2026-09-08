@@ -27,19 +27,11 @@ export default function PrivacyPage() {
 
       <h2>What the providers do with your text</h2>
       <p>
-        Your messages are sent to whichever provider answers. Two of the free tiers we use train on
-        submitted content:
+        Your messages are sent to whichever provider answers — currently Groq or Cloudflare Workers
+        AI. Neither states that free-tier content is used to train their models, but the models
+        themselves come from third parties with their own terms, and a free tier is not a
+        confidentiality guarantee.
       </p>
-      <ul>
-        <li>
-          <strong>Mistral</strong> — the free Experiment tier requires opting in to having your
-          content used for model training.
-        </li>
-        <li>
-          <strong>Google Gemini</strong> — content submitted on the unpaid tier may be used to
-          improve Google&apos;s products, and may be reviewed by people.
-        </li>
-      </ul>
       <p>
         Do not send anything confidential through a free tier. This applies whether the request runs
         on our shared pool or on a key of your own.

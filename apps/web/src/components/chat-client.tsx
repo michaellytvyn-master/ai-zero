@@ -3,13 +3,16 @@
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useRef, useState } from 'react'
+import type { ModelChoice } from '@zca/providers'
 import { readSse } from '@zca/shared'
+import ModelPicker from './model-picker'
 
 interface Turn {
   id: string
   role: 'system' | 'user' | 'assistant'
   content: string
   provider?: string | null
+  model?: string | null
 }
 
 interface KeyPrompt {
@@ -25,6 +28,8 @@ export default function ChatClient(props: {
   usingOwnKeys: boolean
   demoRemaining: number | null
   demoLimit: number | null
+  models: ModelChoice[]
+  initialModel: string
 }) {
   const router = useRouter()
   const [turns, setTurns] = useState<Turn[]>(() =>
@@ -35,6 +40,7 @@ export default function ChatClient(props: {
   const [provider, setProvider] = useState<string | null>(null)
   const [needsKey, setNeedsKey] = useState<KeyPrompt[] | null>(null)
   const [remaining, setRemaining] = useState(props.demoRemaining)
+  const [model, setModel] = useState(props.initialModel)
   const conversationId = useRef(props.activeId)
 
   async function send() {
@@ -55,6 +61,7 @@ export default function ChatClient(props: {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         content,
+        model,
         ...(conversationId.current !== null && { conversationId: conversationId.current }),
       }),
     })
@@ -80,6 +87,14 @@ export default function ChatClient(props: {
       if (event.name === 'meta') {
         conversationId.current = String(event.data.conversationId)
         setProvider(String(event.data.provider))
+        // The reply is tagged with whoever actually answered, which may differ
+        // from the pick when the chosen provider was rate limited.
+        const answered = { provider: String(event.data.provider), model: String(event.data.model) }
+        setTurns((previous) => {
+          const last = previous[previous.length - 1]
+          if (last === undefined) return previous
+          return [...previous.slice(0, -1), { ...last, ...answered }]
+        })
       } else if (event.name === 'delta') {
         const chunk = String(event.data.content)
         setTurns((previous) => appendToLast(previous, chunk))
@@ -140,6 +155,8 @@ export default function ChatClient(props: {
             <div key={turn.id} className="card" style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
               <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>
                 {turn.role}
+                {turn.provider != null && ` · ${turn.provider}`}
+                {turn.model != null && ` · ${turn.model}`}
               </div>
               {turn.content || (busy && index === turns.length - 1 ? '…' : '')}
             </div>
@@ -166,6 +183,14 @@ export default function ChatClient(props: {
             </div>
           </div>
         )}
+
+        <ModelPicker
+          models={props.models}
+          value={props.usingOwnKeys ? model : 'auto'}
+          onChange={setModel}
+          disabled={!props.usingOwnKeys}
+          disabledReason="the shared pool runs the smallest model; add your own key to choose"
+        />
 
         <div className="row">
           <textarea

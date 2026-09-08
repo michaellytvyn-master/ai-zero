@@ -36,7 +36,7 @@ export function createCloudflare(apiRoot: string = CLOUDFLARE_API_ROOT): Provide
   return {
     id: 'cloudflare',
     label: 'Cloudflare Workers AI',
-    priority: 30,
+    priority: 20,
     signupUrl: 'https://dash.cloudflare.com/?to=/:account/ai/workers-ai',
     keyEnvVar: 'CF_API_TOKEN',
     baseUrl: apiRoot,
@@ -45,10 +45,17 @@ export function createCloudflare(apiRoot: string = CLOUDFLARE_API_ROOT): Provide
     // Only models outside Cloudflare's paid-billing list. Kimi, GLM and the
     // DeepSeek v4 variants need a payment method and are deliberately absent.
     models: [
+      { id: '@cf/openai/gpt-oss-120b', label: 'GPT-OSS 120B', contextWindow: 128000, free: true },
       {
-        id: '@cf/openai/gpt-oss-120b',
-        label: 'GPT-OSS 120B',
+        id: '@cf/mistralai/mistral-small-3.1-24b-instruct',
+        label: 'Mistral Small 3.1 24B',
         contextWindow: 128000,
+        free: true,
+      },
+      {
+        id: '@cf/meta/llama-3.2-3b-instruct',
+        label: 'Llama 3.2 3B',
+        contextWindow: 80000,
         free: true,
       },
       {
@@ -57,6 +64,7 @@ export function createCloudflare(apiRoot: string = CLOUDFLARE_API_ROOT): Provide
         contextWindow: 24000,
         free: true,
       },
+      { id: '@cf/qwen/qwq-32b', label: 'QwQ 32B (reasoning)', contextWindow: 24000, free: true },
       {
         id: '@cf/meta/llama-3.1-8b-instruct',
         label: 'Llama 3.1 8B',
