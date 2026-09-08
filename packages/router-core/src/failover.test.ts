@@ -1,64 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import type { UsageEvent } from '@zca/shared'
 import { ProviderHttpError } from '@zca/providers'
 import { AllProvidersFailedError, MidStreamError, ProviderAuthError } from './errors'
 import { runFailover, type FailoverDeps, type RouterEvent } from './failover'
 import { MemoryCooldownStore } from './store'
-import { fakeProvider, type FakeProvider } from './testing/fake-provider'
-
-const REQUEST = {
-  model: 'auto',
-  messages: [{ role: 'user' as const, content: 'hi' }],
-  temperature: null,
-  maxTokens: null,
-}
-
-interface Harness {
-  readonly deps: FailoverDeps
-  readonly recorded: UsageEvent[]
-  readonly cooldowns: MemoryCooldownStore
-}
-
-function harness(
-  providers: readonly FakeProvider[],
-  options: { keyless?: readonly string[]; firstTokenTimeoutMs?: number } = {},
-): Harness {
-  const recorded: UsageEvent[] = []
-  const cooldowns = new MemoryCooldownStore()
-  const keyless = new Set(options.keyless ?? [])
-
-  return {
-    recorded,
-    cooldowns,
-    deps: {
-      providers,
-      keyFor: (provider) => (keyless.has(provider.id) ? null : `key-${provider.id}`),
-      cooldowns,
-      recordUsage: async (event) => {
-        recorded.push(event)
-      },
-      firstTokenTimeoutMs: options.firstTokenTimeoutMs ?? 5_000,
-      cooldownSeconds: 60,
-      now: () => Date.now(),
-    },
-  }
-}
-
-async function collect(events: AsyncGenerator<RouterEvent>): Promise<RouterEvent[]> {
-  const seen: RouterEvent[] = []
-  for await (const event of events) seen.push(event)
-  return seen
-}
-
-const textOf = (events: readonly RouterEvent[]): string =>
-  events.flatMap((e) => (e.kind === 'delta' ? [e.content] : [])).join('')
-
-const answeredBy = (events: readonly RouterEvent[]): string | undefined =>
-  events.flatMap((e) => (e.kind === 'selected' ? [e.providerId] : []))[0]
-
-const signal = () => new AbortController().signal
-const rateLimited = (id: string, retryAfter: number | null = null) =>
-  new ProviderHttpError(id, 429, retryAfter, `${id} rate limited`)
+import { fakeProvider } from './testing/fake-provider'
+import {
+  REQUEST,
+  answeredBy,
+  collect,
+  harness,
+  rateLimited,
+  signal,
+  textOf,
+} from './testing/harness'
 
 describe('runFailover', () => {
   it('moves to the next provider when the first is rate limited', async () => {
@@ -217,65 +171,5 @@ describe('runFailover', () => {
 
     expect(answeredBy(events)).toBe('beta')
     expect(alpha.calls).toHaveLength(0)
-  })
-})
-
-describe('usage recording', () => {
-  it('records token counts and latency for a completed request', async () => {
-    const provider = fakeProvider({ id: 'alpha', priority: 1 })
-    const { deps, recorded } = harness([provider])
-
-    await collect(runFailover(deps, REQUEST, signal()))
-
-    expect(recorded).toHaveLength(1)
-    expect(recorded[0]).toMatchObject({
-      providerId: 'alpha',
-      model: 'm1',
-      inputTokens: 11,
-      outputTokens: 7,
-      status: 200,
-      source: 'router',
-    })
-  })
-
-  it('carries no prompt or response content, only the fields constraint 3 allows', async () => {
-    const provider = fakeProvider({
-      id: 'alpha',
-      priority: 1,
-      chunks: [
-        { kind: 'delta', content: 'a very secret answer' },
-        { kind: 'stop', finishReason: 'stop' },
-      ],
-    })
-    const { deps, recorded } = harness([provider])
-
-    await collect(runFailover(deps, REQUEST, signal()))
-
-    expect(Object.keys(recorded[0] ?? {}).sort()).toEqual([
-      'at',
-      'inputTokens',
-      'latencyMs',
-      'model',
-      'outputTokens',
-      'providerId',
-      'source',
-      'status',
-    ])
-    expect(JSON.stringify(recorded)).not.toContain('secret')
-  })
-
-  it('still records usage when the stream dies part way through', async () => {
-    const provider = fakeProvider({
-      id: 'alpha',
-      priority: 1,
-      chunks: [{ kind: 'delta', content: 'partial' }],
-      failMidStreamWith: new ProviderHttpError('alpha', 500, null, 'boom'),
-    })
-    const { deps, recorded } = harness([provider])
-
-    await collect(runFailover(deps, REQUEST, signal())).catch(() => undefined)
-
-    expect(recorded).toHaveLength(1)
-    expect(recorded[0]?.status).toBe(500)
   })
 })
