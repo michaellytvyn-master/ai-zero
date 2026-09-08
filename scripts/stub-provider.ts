@@ -12,12 +12,10 @@ interface Stub {
   readonly name: string
 }
 
-const stubs: Stub[] = (process.env['STUB_SPEC'] ?? '9001:stream:stub')
-  .split(',')
-  .map((entry) => {
-    const [port, mode, name] = entry.split(':')
-    return { port: Number(port), mode: mode ?? 'stream', name: name ?? 'stub' }
-  })
+const stubs: Stub[] = (process.env.STUB_SPEC ?? '9001:stream:stub').split(',').map((entry) => {
+  const [port, mode, name] = entry.split(':')
+  return { port: Number(port), mode: mode ?? 'stream', name: name ?? 'stub' }
+})
 
 const failures: Record<string, number> = { '429': 429, '401': 401, '500': 500 }
 

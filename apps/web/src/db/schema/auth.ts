@@ -1,11 +1,5 @@
 import type { AdapterAccountType } from 'next-auth/adapters'
-import {
-  integer,
-  pgTable,
-  primaryKey,
-  text,
-  timestamp,
-} from 'drizzle-orm/pg-core'
+import { integer, pgTable, primaryKey, text, timestamp } from 'drizzle-orm/pg-core'
 
 /** Shapes required by @auth/drizzle-adapter. Do not rename these columns. */
 export const users = pgTable('user', {

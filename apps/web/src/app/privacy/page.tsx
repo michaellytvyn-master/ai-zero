@@ -5,9 +5,9 @@ export default function PrivacyPage() {
 
       <h2>Your conversations</h2>
       <p>
-        Messages you send and the replies you receive are saved to your account so you can come
-        back to them from any device. You can delete a conversation at any time, which removes it
-        from our database. Administrators cannot read your conversations.
+        Messages you send and the replies you receive are saved to your account so you can come back
+        to them from any device. You can delete a conversation at any time, which removes it from
+        our database. Administrators cannot read your conversations.
       </p>
 
       <h2>Your provider keys</h2>

@@ -41,7 +41,7 @@ export default async function SavingsPage({
       <div className="row" style={{ flexWrap: 'wrap', marginBottom: 18 }}>
         {referenceModels.map((entry) => (
           <Link key={entry.id} href={`/savings?model=${entry.id}`}>
-            <button className={entry.id === model.id ? 'primary' : ''}>
+            <button type="button" className={entry.id === model.id ? 'primary' : ''}>
               vs {entry.label}
             </button>
           </Link>
@@ -49,8 +49,8 @@ export default async function SavingsPage({
       </div>
 
       <p className="muted" style={{ fontSize: 13 }}>
-        {model.why} Priced at ${model.inputPerMillionUsd}/M input and $
-        {model.outputPerMillionUsd}/M output, read from{' '}
+        {model.why} Priced at ${model.inputPerMillionUsd}/M input and ${model.outputPerMillionUsd}/M
+        output, read from{' '}
         <a href={model.source} target="_blank" rel="noreferrer">
           {model.vendor}
         </a>{' '}

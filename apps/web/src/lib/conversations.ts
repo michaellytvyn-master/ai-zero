@@ -85,13 +85,15 @@ export async function appendMessage(
     model?: string | null
   },
 ): Promise<void> {
-  await db().insert(messages).values({
-    conversationId,
-    role: message.role,
-    content: message.content,
-    providerId: message.providerId ?? null,
-    model: message.model ?? null,
-  })
+  await db()
+    .insert(messages)
+    .values({
+      conversationId,
+      role: message.role,
+      content: message.content,
+      providerId: message.providerId ?? null,
+      model: message.model ?? null,
+    })
   await db()
     .update(conversations)
     .set({ updatedAt: new Date() })

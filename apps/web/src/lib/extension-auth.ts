@@ -15,7 +15,9 @@ export interface ExtensionUser {
  */
 export async function issueExtensionToken(userId: string): Promise<string> {
   const token = randomBytes(32).toString('base64url')
-  await db().insert(extensionSessions).values({ userId, tokenHash: hash(token) })
+  await db()
+    .insert(extensionSessions)
+    .values({ userId, tokenHash: hash(token) })
   return token
 }
 

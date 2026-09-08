@@ -12,7 +12,7 @@ The brief is [SPEC.md](SPEC.md). Where the build departs from it, and why, is
 
 ## Status
 
-Router, web app, extension and the savings counter are working.
+All seven phases of [SPEC.md](SPEC.md) are built.
 
 | | | |
 |---|---|---|
@@ -20,9 +20,16 @@ Router, web app, extension and the savings counter are working.
 | Web app: Google auth, Postgres, encrypted key vault, chat with history, admin dashboard | done | 22 tests |
 | Extension: sign-in through the site, side panel, BYOK direct mode, page context, context menu | done | 9 tests |
 | Savings counter | done | 18 tests |
-| Ship: store listing, CI, licence | not started | |
+| Ship: licence, CI, icons, store listing | done | |
 
-78 tests in total; 22 of them run against a real Postgres.
+78 tests; 22 of them run against a real Postgres. CI runs lint, typecheck, the
+full suite against a Postgres service container, and both builds on every push.
+
+Outstanding, and honest about it: the store screenshots and the README
+recording need a real signed-in Chrome profile, so they are a checklist in
+[store/screenshots.md](store/screenshots.md) rather than files. The Cloudflare
+adapter is written but not registered, because its model identifiers were not
+in the public docs — see [docs/providers.md](docs/providers.md).
 
 ## Layout
 
@@ -36,7 +43,8 @@ apps/
   web/          Next.js: auth, key vault, chat, admin, and the router mounted
                 as route handlers
   extension/    Manifest V3 side panel, Vite + React
-scripts/        Phase 1 harness: a node:http server and provider stubs
+scripts/        Phase 1 harness, plus the icon generator
+store/          Chrome Web Store listing text and permission justifications
 docs/           provider verification log
 ```
 
@@ -163,3 +171,33 @@ Re-check the prices periodically and update the `checkedOn` stamps.
 
 See [DECISIONS.md](DECISIONS.md) for where these depart from SPEC.md, and
 [/privacy](apps/web/src/app/privacy/page.tsx) for what users are told.
+
+## Development
+
+```bash
+pnpm lint          # biome, checks formatting too
+pnpm format        # biome, writes fixes
+pnpm typecheck     # tsc across every package
+pnpm test          # unit tests; integration tests skip without a database
+pnpm test:db       # everything, against postgres://localhost:5432/zca_dev
+pnpm icons         # regenerate the extension icons
+```
+
+CI runs all of the above plus both production builds. The integration suite
+skips itself when `TEST_DATABASE_URL` is unset, which would make an
+unreachable database look like a pass, so the workflow asserts the connection
+before running it.
+
+Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
+
+## Publishing the extension
+
+`store/listing.md` holds the description, the single-purpose statement, a
+justification for every permission, and the answers to the data-use form.
+`store/screenshots.md` is the capture checklist. Before publishing, replace
+`http://localhost:3000/*` in `apps/extension/public/manifest.json` with the
+production origin and build with `VITE_SITE_URL` set to match.
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).

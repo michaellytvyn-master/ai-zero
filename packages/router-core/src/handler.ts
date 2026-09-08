@@ -1,9 +1,5 @@
 import { orderedProviders, qualifiedModelIds } from '@zca/providers'
-import {
-  AllProvidersFailedError,
-  ProviderAuthError,
-  ProviderFatalError,
-} from './errors'
+import { AllProvidersFailedError, ProviderAuthError, ProviderFatalError } from './errors'
 import { runFailover, type FailoverDeps, type RouterEvent } from './failover'
 import {
   chatCompletionRequestSchema,
@@ -78,9 +74,13 @@ function streamingResponse(
       try {
         for await (const event of events) {
           if (event.kind === 'delta') {
-            send(sseEvent(chunkPayload(id, created, selected.model, { content: event.content }, null)))
+            send(
+              sseEvent(chunkPayload(id, created, selected.model, { content: event.content }, null)),
+            )
           } else if (event.kind === 'stop') {
-            send(sseEvent(chunkPayload(id, created, selected.model, {}, event.finishReason ?? 'stop')))
+            send(
+              sseEvent(chunkPayload(id, created, selected.model, {}, event.finishReason ?? 'stop')),
+            )
           } else if (event.kind === 'usage') {
             send(
               sseEvent({

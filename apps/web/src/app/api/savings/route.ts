@@ -1,4 +1,4 @@
-import { referenceModel, savingsFrom } from '@zca/pricing'
+import { type ReferenceModel, referenceModel, savingsFrom } from '@zca/pricing'
 import { resolveUser } from '@/lib/request-user'
 import { unauthenticatedResponse } from '@/lib/responses'
 import { usageTotalsForUser } from '@/lib/savings'
@@ -11,7 +11,7 @@ export async function GET(request: Request): Promise<Response> {
   if (user === null) return unauthenticatedResponse()
 
   const requested = new URL(request.url).searchParams.get('model')
-  let model
+  let model: ReferenceModel
   try {
     model = referenceModel(requested ?? undefined)
   } catch {

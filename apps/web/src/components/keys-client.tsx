@@ -37,9 +37,10 @@ export default function KeysClient(props: {
         method === 'POST' ? { providerId, key: drafts[providerId] ?? '' } : { providerId },
       ),
     })
-    const body = (await response.json().catch(() => null)) as
-      | { keys?: StoredKey[]; error?: { message?: string } }
-      | null
+    const body = (await response.json().catch(() => null)) as {
+      keys?: StoredKey[]
+      error?: { message?: string }
+    } | null
 
     if (!response.ok) setError(body?.error?.message ?? 'Could not save that key.')
     else {
@@ -81,6 +82,7 @@ export default function KeysClient(props: {
                   </span>
                 )}
                 <button
+                  type="button"
                   disabled={busy === provider.id}
                   onClick={() => void submit(provider.id, 'DELETE')}
                 >
@@ -99,6 +101,7 @@ export default function KeysClient(props: {
                   }
                 />
                 <button
+                  type="button"
                   className="primary"
                   disabled={busy === provider.id || (drafts[provider.id] ?? '').length === 0}
                   onClick={() => void submit(provider.id, 'POST')}

@@ -2,15 +2,15 @@ import { randomUUID } from 'node:crypto'
 import { eq, sql } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-const DATABASE_URL = process.env['TEST_DATABASE_URL']
+const DATABASE_URL = process.env.TEST_DATABASE_URL
 const describeDb = DATABASE_URL === undefined ? describe.skip : describe
 
-process.env['DATABASE_URL'] = DATABASE_URL ?? 'postgres://localhost/unused'
-process.env['AUTH_SECRET'] ??= 'test-secret'
-process.env['AUTH_GOOGLE_ID'] ??= 'test-id'
-process.env['AUTH_GOOGLE_SECRET'] ??= 'test-secret'
-process.env['KEY_ENCRYPTION_KEY'] ??= Buffer.alloc(32, 7).toString('base64')
-process.env['DEMO_MESSAGES_PER_ACCOUNT_PER_DAY'] ??= '10'
+process.env.DATABASE_URL = DATABASE_URL ?? 'postgres://localhost/unused'
+process.env.AUTH_SECRET ??= 'test-secret'
+process.env.AUTH_GOOGLE_ID ??= 'test-id'
+process.env.AUTH_GOOGLE_SECRET ??= 'test-secret'
+process.env.KEY_ENCRYPTION_KEY ??= Buffer.alloc(32, 7).toString('base64')
+process.env.DEMO_MESSAGES_PER_ACCOUNT_PER_DAY ??= '10'
 
 const { db } = await import('../db')
 const { providerKeys, users } = await import('../db/schema')
@@ -29,7 +29,9 @@ const created: string[] = []
 
 async function makeUser(): Promise<string> {
   const id = randomUUID()
-  await db().insert(users).values({ id, email: `${id}@test.local` })
+  await db()
+    .insert(users)
+    .values({ id, email: `${id}@test.local` })
   created.push(id)
   return id
 }
@@ -88,9 +90,7 @@ describeDb('demo cap', () => {
   it('lets exactly the configured number of messages through, even in parallel', async () => {
     const userId = await makeUser()
 
-    const results = await Promise.all(
-      Array.from({ length: 25 }, () => claimDemoMessage(userId)),
-    )
+    const results = await Promise.all(Array.from({ length: 25 }, () => claimDemoMessage(userId)))
 
     expect(results.filter((result) => result.allowed)).toHaveLength(10)
     expect((await demoRemaining(userId)).remaining).toBe(0)

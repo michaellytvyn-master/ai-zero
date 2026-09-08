@@ -14,12 +14,16 @@
     "typecheck": "pnpm -r --no-bail typecheck",
     "test": "vitest run",
     "test:db": "TEST_DATABASE_URL=${TEST_DATABASE_URL:-postgres://localhost:5432/zca_dev} vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "icons": "node scripts/make-icons.mjs"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.12",
     "@types/node": "^22.10.2",
     "typescript": "^5.7.2",
-    "vitest": "^2.1.8",
-    "vite-node": "^2.1.8"
+    "vite-node": "^2.1.8",
+    "vitest": "^2.1.8"
   }
 }

@@ -110,7 +110,8 @@ describe('the price table itself', () => {
   it('defaults to the cheapest reference model', () => {
     const cheapest = [...referenceModels].sort(
       (a, b) =>
-        a.inputPerMillionUsd + a.outputPerMillionUsd -
+        a.inputPerMillionUsd +
+        a.outputPerMillionUsd -
         (b.inputPerMillionUsd + b.outputPerMillionUsd),
     )[0]
 

@@ -18,12 +18,7 @@ export default function SavingsPanel({ savings }: { savings: Savings }) {
           </span>
         </div>
       ))}
-      <a
-        href={`${SITE_URL}/savings`}
-        target="_blank"
-        rel="noreferrer"
-        style={{ fontSize: 12 }}
-      >
+      <a href={`${SITE_URL}/savings`} target="_blank" rel="noreferrer" style={{ fontSize: 12 }}>
         Full breakdown
       </a>
     </div>

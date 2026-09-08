@@ -1,9 +1,4 @@
-import {
-  createCerebras,
-  createGroq,
-  createMistral,
-  type Provider,
-} from '@zca/providers'
+import { createCerebras, createGroq, createMistral, type Provider } from '@zca/providers'
 import { MemoryCooldownStore, runFailover, type ProviderKey } from '@zca/router-core'
 import { readSse, type ChatMessage, type UsageEvent } from '@zca/shared'
 import { SITE_URL } from './config'
@@ -101,7 +96,11 @@ async function* streamViaRouter(
 
   if (!response.ok || response.body === null) {
     const body = (await response.json().catch(() => null)) as {
-      error?: { type?: string; message?: string; addYourOwnKey?: { label: string; signupUrl: string }[] }
+      error?: {
+        type?: string
+        message?: string
+        addYourOwnKey?: { label: string; signupUrl: string }[]
+      }
     } | null
 
     if (body?.error?.type === 'demo_exhausted') {
@@ -122,11 +121,11 @@ async function* streamViaRouter(
     if (frame.name === 'provider') {
       yield {
         kind: 'provider',
-        providerId: String(frame.data['provider']),
-        model: String(frame.data['model']),
+        providerId: String(frame.data.provider),
+        model: String(frame.data.model),
       }
     } else {
-      const choices = frame.data['choices']
+      const choices = frame.data.choices
       if (!Array.isArray(choices)) continue
       const delta = (choices[0] as { delta?: { content?: string } } | undefined)?.delta?.content
       if (typeof delta === 'string' && delta.length > 0) yield { kind: 'delta', content: delta }

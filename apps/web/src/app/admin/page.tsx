@@ -27,8 +27,7 @@ export default async function AdminPage() {
     <main className="wrap" style={{ maxWidth: 1100 }}>
       <h1>Usage</h1>
       <p className="muted">
-        Metadata only. Conversation content is never shown here and is not queryable from this
-        page.
+        Metadata only. Conversation content is never shown here and is not queryable from this page.
       </p>
 
       <div className="card">
@@ -95,7 +94,9 @@ export default async function AdminPage() {
               <td>{row.inputTokens.toLocaleString()}</td>
               <td>{row.outputTokens.toLocaleString()}</td>
               <td className="muted">
-                {row.lastActive === null ? '—' : new Date(row.lastActive).toISOString().slice(0, 10)}
+                {row.lastActive === null
+                  ? '—'
+                  : new Date(row.lastActive).toISOString().slice(0, 10)}
               </td>
             </tr>
           ))}

@@ -25,17 +25,17 @@ import {
 import type { UsageEvent } from '@zca/shared'
 
 const config = {
-  port: Number(process.env['PORT'] ?? 8787),
-  firstTokenTimeoutMs: Number(process.env['FIRST_TOKEN_TIMEOUT_MS'] ?? 8000),
-  cooldownSeconds: Number(process.env['PROVIDER_COOLDOWN_SECONDS'] ?? 60),
+  port: Number(process.env.PORT ?? 8787),
+  firstTokenTimeoutMs: Number(process.env.FIRST_TOKEN_TIMEOUT_MS ?? 8000),
+  cooldownSeconds: Number(process.env.PROVIDER_COOLDOWN_SECONDS ?? 60),
 } as const
 
 // Base URLs default to the values verified against each provider's docs; the
 // override exists so the failover can be driven against local stubs.
 const providers: readonly Provider[] = [
-  createMistral(process.env['MISTRAL_BASE_URL'] ?? MISTRAL_BASE_URL),
-  createGroq(process.env['GROQ_BASE_URL'] ?? GROQ_BASE_URL),
-  createCerebras(process.env['CEREBRAS_BASE_URL'] ?? CEREBRAS_BASE_URL),
+  createMistral(process.env.MISTRAL_BASE_URL ?? MISTRAL_BASE_URL),
+  createGroq(process.env.GROQ_BASE_URL ?? GROQ_BASE_URL),
+  createCerebras(process.env.CEREBRAS_BASE_URL ?? CEREBRAS_BASE_URL),
 ].sort((a, b) => a.priority - b.priority)
 
 const keyFor = (provider: Provider): ProviderKey | null => {

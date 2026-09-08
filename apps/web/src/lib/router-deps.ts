@@ -16,9 +16,9 @@ import { recordUsage } from './usage'
 
 export function allProviders(): readonly Provider[] {
   return [
-    createMistral(process.env['MISTRAL_BASE_URL'] ?? MISTRAL_BASE_URL),
-    createGroq(process.env['GROQ_BASE_URL'] ?? GROQ_BASE_URL),
-    createCerebras(process.env['CEREBRAS_BASE_URL'] ?? CEREBRAS_BASE_URL),
+    createMistral(process.env.MISTRAL_BASE_URL ?? MISTRAL_BASE_URL),
+    createGroq(process.env.GROQ_BASE_URL ?? GROQ_BASE_URL),
+    createCerebras(process.env.CEREBRAS_BASE_URL ?? CEREBRAS_BASE_URL),
   ].sort((a, b) => a.priority - b.priority)
 }
 

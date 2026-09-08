@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: zca_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/zca_test
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/zca_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Lint and format check
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Create the schema
+        run: pnpm db:push --force
+
+      # The integration suite skips itself without TEST_DATABASE_URL, so this
+      # step failing to see a database would look like a pass. Fail loudly instead.
+      - name: Confirm the database is reachable
+        run: psql "$DATABASE_URL" -c 'select 1' >/dev/null
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build the web app
+        run: pnpm build
+        env:
+          AUTH_SECRET: ci-build-only
+          AUTH_GOOGLE_ID: ci-build-only
+          AUTH_GOOGLE_SECRET: ci-build-only
+          KEY_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+
+      - name: Build the extension
+        run: pnpm --filter @zca/extension build

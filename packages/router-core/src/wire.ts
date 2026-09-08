@@ -59,9 +59,7 @@ export function completionPayload(
     // Non-standard, mirrors the streaming `provider` event so both shapes can
     // tell the UI who answered.
     x_provider: providerId,
-    choices: [
-      { index: 0, message: { role: 'assistant', content }, finish_reason: finishReason },
-    ],
+    choices: [{ index: 0, message: { role: 'assistant', content }, finish_reason: finishReason }],
     usage: {
       prompt_tokens: inputTokens,
       completion_tokens: outputTokens,

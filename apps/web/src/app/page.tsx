@@ -12,10 +12,12 @@ export default function LandingPage() {
 
       <div className="row" style={{ margin: '24px 0' }}>
         <Link href="/signin">
-          <button className="primary">Sign in with Google</button>
+          <button type="button" className="primary">
+            Sign in with Google
+          </button>
         </Link>
         <Link href="/privacy">
-          <button>What we store</button>
+          <button type="button">What we store</button>
         </Link>
       </div>
 
@@ -48,8 +50,8 @@ export default function LandingPage() {
         </tbody>
       </table>
       <p className="muted" style={{ fontSize: 13 }}>
-        Limits verified 2026-09-08. Cerebras retired its no-card free tier in August 2026, so it
-        is last and only runs if you bring credits.
+        Limits verified 2026-09-08. Cerebras retired its no-card free tier in August 2026, so it is
+        last and only runs if you bring credits.
       </p>
     </main>
   )

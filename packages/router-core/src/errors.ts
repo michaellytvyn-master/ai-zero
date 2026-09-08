@@ -1,9 +1,4 @@
-export type AttemptReason =
-  | 'no_key'
-  | 'cooldown'
-  | 'unsupported_model'
-  | 'rate_limit'
-  | 'transient'
+export type AttemptReason = 'no_key' | 'cooldown' | 'unsupported_model' | 'rate_limit' | 'transient'
 
 export interface AttemptRecord {
   readonly providerId: string

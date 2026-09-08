@@ -8,7 +8,7 @@ import { loadSavings } from '@/lib/savings'
 import { loadSession, signOut, startSignIn, type Session } from '@/lib/session'
 import SavingsPanel from './SavingsPanel'
 
-type Turn = { role: 'user' | 'assistant'; content: string }
+type Turn = { id: string; role: 'user' | 'assistant'; content: string }
 type Exhausted = { label: string; url: string }[]
 
 export default function App() {
@@ -33,7 +33,7 @@ export default function App() {
   // The context menu drops the selected text here before opening the panel.
   useEffect(() => {
     void chrome.storage.local.get('pendingQuote').then(async (stored) => {
-      const quote = stored['pendingQuote'] as string | undefined
+      const quote = stored.pendingQuote as string | undefined
       if (quote === undefined || quote.length === 0) return
       await chrome.storage.local.remove('pendingQuote')
       setDraft(`"""\n${quote}\n"""\n\n`)
@@ -41,7 +41,9 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    log.current?.scrollTo({ top: log.current.scrollHeight })
+    const panel = log.current
+    if (panel === null || turns.length === 0) return
+    panel.scrollTo({ top: panel.scrollHeight })
   }, [turns])
 
   const send = useCallback(async () => {
@@ -54,7 +56,11 @@ export default function App() {
     setExhausted(null)
 
     const history: ChatMessage[] = [...turns, { role: 'user' as const, content }]
-    setTurns((previous) => [...previous, { role: 'user', content }, { role: 'assistant', content: '' }])
+    setTurns((previous) => [
+      ...previous,
+      { id: crypto.randomUUID(), role: 'user', content },
+      { id: crypto.randomUUID(), role: 'assistant', content: '' },
+    ])
 
     const controller = new AbortController()
     for await (const event of streamChat(session, history, 'auto', controller.signal)) {
@@ -86,6 +92,7 @@ export default function App() {
         <h3>Zero-Cost AI</h3>
         <p className="muted">Sign in with the account you use on the site.</p>
         <button
+          type="button"
           className="primary"
           onClick={() => {
             void startSignIn()
@@ -107,11 +114,14 @@ export default function App() {
   return (
     <>
       <header>
-        <span className="badge">{ownKeys ? 'your keys' : `demo ${session.demo?.remaining ?? 0} left`}</span>
+        <span className="badge">
+          {ownKeys ? 'your keys' : `demo ${session.demo?.remaining ?? 0} left`}
+        </span>
         {provider !== null && <span className="badge">via {provider}</span>}
         {session.stale && <span className="badge">offline</span>}
         {savings !== null && (
           <button
+            type="button"
             className="badge"
             style={{ padding: '2px 7px', cursor: 'pointer' }}
             onClick={() => setShowSavings((open) => !open)}
@@ -123,15 +133,15 @@ export default function App() {
         <a href={`${SITE_URL}/account`} target="_blank" rel="noreferrer">
           Keys
         </a>
-        <a
-          href="#"
-          onClick={(event) => {
-            event.preventDefault()
+        <button
+          type="button"
+          className="linklike"
+          onClick={() => {
             void signOut().then(() => setSession(null))
           }}
         >
           Sign out
-        </a>
+        </button>
       </header>
 
       <div className="log" ref={log}>
@@ -142,7 +152,7 @@ export default function App() {
           </p>
         )}
         {turns.map((turn, index) => (
-          <div key={index} className={`turn ${turn.role}`}>
+          <div key={turn.id} className={`turn ${turn.role}`}>
             <div className="who">{turn.role}</div>
             {turn.content || (busy && index === turns.length - 1 ? '…' : '')}
           </div>
@@ -186,9 +196,11 @@ export default function App() {
           }}
         />
         <div className="row">
-          <button onClick={() => void addPageContext()}>Add page</button>
+          <button type="button" onClick={() => void addPageContext()}>
+            Add page
+          </button>
           <span className="spacer" style={{ marginLeft: 'auto' }} />
-          <button className="primary" disabled={busy} onClick={() => void send()}>
+          <button type="button" className="primary" disabled={busy} onClick={() => void send()}>
             Send
           </button>
         </div>
