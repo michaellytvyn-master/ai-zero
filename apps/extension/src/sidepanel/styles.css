@@ -155,3 +155,9 @@ button:disabled {
 a {
   color: var(--accent);
 }
+.attached {
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

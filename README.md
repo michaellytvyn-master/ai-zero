@@ -18,7 +18,7 @@ All seven phases of [SPEC.md](SPEC.md) are built.
 |---|---|---|
 | Router core: providers, failover, streaming | done | 29 tests |
 | Web app: accounts, Postgres, encrypted key vault, chat with history, dashboard, admin | done | 32 tests |
-| Extension: sign-in through the site, side panel, BYOK direct mode, page context, context menu | done | 9 tests |
+| Extension: sign-in through the site, side panel, BYOK direct mode, page reading, context menu | done | 16 tests |
 | Savings counter | done | 18 tests |
 | Ship: licence, CI, icons, store listing | done | |
 

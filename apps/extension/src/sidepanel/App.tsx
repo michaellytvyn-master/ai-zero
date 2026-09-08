@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { formatUsd, type Savings } from '@zca/pricing'
+import type { Savings } from '@zca/pricing'
 import type { ChatMessage } from '@zca/shared'
 import { streamChat, usesOwnKeys, type ChatEvent } from '@/lib/chat'
 import { SITE_URL } from '@/lib/config'
-import { asQuotedContext, readActivePage } from '@/lib/page-context'
+import { contextCharBudget } from '@/lib/context-budget'
+import { asContextMessage, readActivePage, type PageMode } from '@/lib/page-context'
 import { pickableModels } from '@/lib/models'
 import { loadSavings } from '@/lib/savings'
-import { loadSession, signOut, startSignIn, type Session } from '@/lib/session'
+import { loadSession, signOut, type Session } from '@/lib/session'
+import Composer from './Composer'
+import Header from './Header'
+import SignIn from './SignIn'
 import SavingsPanel from './SavingsPanel'
 
 type Turn = { id: string; role: 'user' | 'assistant'; content: string; answeredBy?: string }
@@ -22,6 +26,8 @@ export default function App() {
   const [error, setError] = useState<string | null>(null)
   const [savings, setSavings] = useState<Savings | null>(null)
   const [model, setModel] = useState('auto')
+  const [pageMode, setPageMode] = useState<PageMode>('off')
+  const [attached, setAttached] = useState<string | null>(null)
   const [showSavings, setShowSavings] = useState(false)
   const log = useRef<HTMLDivElement>(null)
 
@@ -67,6 +73,26 @@ export default function App() {
       { id: crypto.randomUUID(), role: 'assistant', content: '' },
     ])
 
+    if (pageMode !== 'off') {
+      try {
+        const budget = contextCharBudget(pickableModels(session), model)
+        const page = await readActivePage(pageMode, budget)
+        history.unshift({ role: 'system', content: asContextMessage(page) })
+        setAttached(
+          `${page.title || page.url} · ${page.mode} · ${page.content.length.toLocaleString()} chars${
+            page.truncated ? ' (truncated)' : ''
+          }`,
+        )
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : 'Could not read the page.')
+        setTurns((previous) => previous.slice(0, -2))
+        setBusy(false)
+        return
+      }
+    } else {
+      setAttached(null)
+    }
+
     const controller = new AbortController()
     for await (const event of streamChat(session, history, model, controller.signal)) {
       applyEvent(event, { setTurns, setProvider, setExhausted, setError })
@@ -78,82 +104,30 @@ export default function App() {
       setSession(refreshed)
       setSavings(await loadSavings(refreshed))
     })
-  }, [busy, draft, model, session, turns])
-
-  async function addPageContext() {
-    try {
-      const page = await readActivePage()
-      setDraft((previous) => `${asQuotedContext(page)}\n\n${previous}`)
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'could not read the page')
-    }
-  }
+  }, [busy, draft, model, pageMode, session, turns])
 
   if (session === undefined) return <div className="centered muted">Loading…</div>
 
-  if (session === null) {
-    return (
-      <div className="centered">
-        <h3>Zero-Cost AI</h3>
-        <p className="muted">Sign in with the account you use on the site.</p>
-        <button
-          type="button"
-          className="primary"
-          onClick={() => {
-            void startSignIn()
-              .then(setSession)
-              .catch((cause: unknown) =>
-                setError(cause instanceof Error ? cause.message : 'sign-in failed'),
-              )
-          }}
-        >
-          Sign in
-        </button>
-        {error !== null && <p className="muted">{error}</p>}
-      </div>
-    )
-  }
+  if (session === null) return <SignIn onSignedIn={setSession} />
 
   const ownKeys = usesOwnKeys(session)
 
   return (
     <>
-      <header>
-        <span className="badge">
-          {ownKeys ? 'your keys' : `demo ${session.demo?.remaining ?? 0} left`}
-        </span>
-        {provider !== null && <span className="badge">via {provider}</span>}
-        {session.stale && <span className="badge">offline</span>}
-        {savings !== null && (
-          <button
-            type="button"
-            className="badge"
-            style={{ padding: '2px 7px', cursor: 'pointer' }}
-            onClick={() => setShowSavings((open) => !open)}
-          >
-            saved {formatUsd(savings.microUsd)}
-          </button>
-        )}
-        <span className="spacer" />
-        <a href={`${SITE_URL}/dashboard/keys`} target="_blank" rel="noreferrer">
-          Keys
-        </a>
-        <button
-          type="button"
-          className="linklike"
-          onClick={() => {
-            void signOut().then(() => setSession(null))
-          }}
-        >
-          Sign out
-        </button>
-      </header>
+      <Header
+        session={session}
+        ownKeys={ownKeys}
+        provider={provider}
+        savings={savings}
+        onToggleSavings={() => setShowSavings((open) => !open)}
+        onSignOut={() => void signOut().then(() => setSession(null))}
+      />
 
       <div className="log" ref={log}>
         {turns.length === 0 && (
           <p className="muted">
-            Ask anything. Select text on a page and right click to quote it, or pull the whole page
-            in below.
+            Ask anything. To ask about the page you are on, switch &ldquo;Do not read the
+            page&rdquo; below to text or HTML. Selecting text and right clicking quotes just that.
           </p>
         )}
         {turns.map((turn, index) => (
@@ -187,43 +161,19 @@ export default function App() {
 
       {error !== null && <div className="notice bad">{error}</div>}
 
-      <div className="composer">
-        {ownKeys && (
-          <select
-            value={model}
-            onChange={(event) => setModel(event.target.value)}
-            aria-label="Model"
-          >
-            <option value="auto">Automatic (first available)</option>
-            {pickableModels(session).map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.providerLabel} · {option.label} · {Math.round(option.contextWindow / 1000)}k
-              </option>
-            ))}
-          </select>
-        )}
-        <textarea
-          rows={3}
-          value={draft}
-          placeholder="Ask something"
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.shiftKey) {
-              event.preventDefault()
-              void send()
-            }
-          }}
-        />
-        <div className="row">
-          <button type="button" onClick={() => void addPageContext()}>
-            Add page
-          </button>
-          <span className="spacer" style={{ marginLeft: 'auto' }} />
-          <button type="button" className="primary" disabled={busy} onClick={() => void send()}>
-            Send
-          </button>
-        </div>
-      </div>
+      <Composer
+        draft={draft}
+        onDraft={setDraft}
+        onSend={() => void send()}
+        busy={busy}
+        pageMode={pageMode}
+        onPageMode={setPageMode}
+        models={pickableModels(session)}
+        model={model}
+        onModel={setModel}
+        showModelPicker={ownKeys}
+        attached={attached}
+      />
     </>
   )
 }

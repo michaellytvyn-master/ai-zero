@@ -27,9 +27,9 @@ Zero-Cost AI
 >
 > Ask a question in the side panel and the request goes to whichever provider
 > is available. If one is rate limited or down, the next one answers, and the
-> panel tells you which provider it was. You can pull the text of the page you
-> are reading into the conversation, or select text anywhere and right click to
-> quote it.
+> panel tells you which provider it was. It can read the page you are on, as
+> readable text or as HTML source, so you can ask about what is in front of
+> you, and selecting text anywhere lets you quote just that.
 >
 > Add your own free API keys and requests go straight from your browser to the
 > provider, so nothing passes through our servers, and it keeps working even
@@ -60,8 +60,8 @@ Reviewers read these. Each one names the feature that stops working without it.
 | `storage` | Caches the signed-in session, the user's own provider keys, and the last savings figure in `chrome.storage.local`, so the panel works across browser restarts and while the server is unreachable. Never `chrome.storage.sync`. |
 | `identity` | Sign-in uses `chrome.identity.launchWebAuthFlow` against the extension's own website. It is the only way the user authenticates; no password is ever typed into the extension. |
 | `contextMenus` | Adds the single "Ask AI about ..." item shown when text is selected, which is how a user quotes a passage into the chat. |
-| `activeTab` | The "Add page" button reads the visible text of the tab the user is looking at, only after the user presses it. Chosen over a broad host permission specifically so the extension cannot read pages on its own. |
-| `scripting` | Runs the one function that collects that visible text. It is invoked only from the "Add page" button and only against the active tab. |
+| `activeTab` | When the user switches the panel's page-context control on, the extension reads the tab they are looking at, either as visible text or as HTML source, so it can answer questions about it. Chosen over a broad host permission specifically so the extension cannot read pages on its own. |
+| `scripting` | Runs the one function that collects that content. It is invoked only when the user has asked for the page to be read, and only against the active tab. |
 
 ### Host permissions
 
