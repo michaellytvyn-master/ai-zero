@@ -12,17 +12,16 @@ The brief is [SPEC.md](SPEC.md). Where the build departs from it, and why, is
 
 ## Status
 
-**Phase 1 (router core) is done.** Phases 2-7 are not started.
+Router core and the web app are done. The extension is next.
 
-| Phase | | |
+| | | |
 |---|---|---|
-| 1 | Router core: providers, failover, streaming | done |
-| 2 | Extension MVP + sign-in | not started |
-| 3 | BYOK direct mode | not started |
-| 4 | Savings counter | not started |
-| 5 | Page context and context menu | not started |
-| 6 | Web app: auth, Postgres, demo, admin dashboard | not started |
-| 7 | Ship | not started |
+| Router core: providers, failover, streaming | done | 29 tests |
+| Web app: Google auth, Postgres, encrypted key vault, chat with history, admin dashboard | done | 22 tests, 9 against a real database |
+| Chrome extension: sign-in through the site, side panel, BYOK direct mode | not started | |
+| Savings counter | not started | |
+| Page context and context menu | not started | |
+| Ship: store listing, CI, licence | not started | |
 
 ## Layout
 
@@ -31,12 +30,15 @@ packages/
   shared/       types and zod schemas crossing every boundary
   providers/    one file per provider + the shared OpenAI-compatible helper
   router-core/  failover state machine and a runtime-agnostic HTTP handler
+apps/
+  web/          Next.js: auth, key vault, chat, admin, and the router mounted
+                as route handlers
 scripts/        Phase 1 harness: a node:http server and provider stubs
 docs/           provider verification log
 ```
 
-`packages/router-core` has no Node or Next.js imports, so Phase 6 mounts it as
-a route handler in one line and the failover stays testable on its own.
+`packages/router-core` imports nothing from Node or Next.js, so the failover
+stays testable on its own and could move to another runtime later.
 
 ## Running it
 
@@ -44,25 +46,36 @@ a route handler in one line and the failover stays testable on its own.
 pnpm install
 ```
 
-Tests, including the failover state machine:
+Then set up the web app. Copy `.env.example` to `apps/web/.env.local` and fill
+in a database URL, Google OAuth credentials, and an encryption key:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+```
+
+Create the schema and start the app:
+
+```bash
+pnpm db:push && pnpm dev
+```
+
+Tests. The second command also runs the integration suite, which is skipped
+without a database:
 
 ```bash
 pnpm test
 ```
 
-Drive the router against local stub providers — no API keys, no quota spent.
-The argument is `port:mode:name`, where mode is `stream`, `429`, `401`, `500`
-or `slow`:
+```bash
+createdb zca_dev && pnpm db:push && pnpm test:db
+```
+
+The Phase 1 router harness still works on its own, driven against local stub
+providers so no free-tier quota is spent. Modes are `stream`, `429`, `401`,
+`500` and `slow`:
 
 ```bash
 ./scripts/demo-phase1.sh "9001:429:mistral,9002:stream:groq" curl -sS -N -X POST http://localhost:8787/v1/chat/completions -H 'content-type: application/json' -d '{"model":"auto","stream":true,"messages":[{"role":"user","content":"hi"}]}'
-```
-
-Against real providers, copy `.env.example` to `.env`, add at least one key,
-then:
-
-```bash
-pnpm dev:router
 ```
 
 ## Providers
@@ -86,10 +99,18 @@ former; it is never the latter.
 
 ## Privacy properties held by the code
 
-- No prompt or response content is logged. `UsageEvent` carries only provider,
-  model, token counts, latency, status and timestamp, and a test asserts its
-  exact key set.
-- Provider keys never reach the router in BYOK mode; the extension calls the
-  provider directly.
-- Mistral's free Experiment tier requires opting into model training. Users are
-  told this before they add a Mistral key.
+- Provider keys are encrypted with AES-256-GCM before they reach Postgres. The
+  key that opens them lives in `KEY_ENCRYPTION_KEY`, never in the database, so a
+  dump on its own yields nothing. Tests assert the stored column contains no
+  trace of the plaintext.
+- Usage records carry only provider, model, token counts, latency, status,
+  timestamp and whose key paid. A test asserts the exact key set, so adding a
+  content field breaks the build.
+- The admin dashboard never joins to the messages table, and 404s for anyone
+  not in `ADMIN_EMAILS`.
+- One account cannot load another's conversation. There is a test for it.
+- The demo cap is claimed with a conditional upsert. A test fires 25 concurrent
+  requests at a limit of 10 and asserts exactly 10 get through.
+
+See [DECISIONS.md](DECISIONS.md) for where these depart from SPEC.md, and
+[/privacy](apps/web/src/app/privacy/page.tsx) for what users are told.
