@@ -1,0 +1,281 @@
+import { describe, expect, it } from 'vitest'
+import type { UsageEvent } from '@zca/shared'
+import { ProviderHttpError } from '@zca/providers'
+import { AllProvidersFailedError, MidStreamError, ProviderAuthError } from './errors'
+import { runFailover, type FailoverDeps, type RouterEvent } from './failover'
+import { MemoryCooldownStore } from './store'
+import { fakeProvider, type FakeProvider } from './testing/fake-provider'
+
+const REQUEST = {
+  model: 'auto',
+  messages: [{ role: 'user' as const, content: 'hi' }],
+  temperature: null,
+  maxTokens: null,
+}
+
+interface Harness {
+  readonly deps: FailoverDeps
+  readonly recorded: UsageEvent[]
+  readonly cooldowns: MemoryCooldownStore
+}
+
+function harness(
+  providers: readonly FakeProvider[],
+  options: { keyless?: readonly string[]; firstTokenTimeoutMs?: number } = {},
+): Harness {
+  const recorded: UsageEvent[] = []
+  const cooldowns = new MemoryCooldownStore()
+  const keyless = new Set(options.keyless ?? [])
+
+  return {
+    recorded,
+    cooldowns,
+    deps: {
+      providers,
+      keyFor: (provider) => (keyless.has(provider.id) ? null : `key-${provider.id}`),
+      cooldowns,
+      recordUsage: async (event) => {
+        recorded.push(event)
+      },
+      firstTokenTimeoutMs: options.firstTokenTimeoutMs ?? 5_000,
+      cooldownSeconds: 60,
+      now: () => Date.now(),
+    },
+  }
+}
+
+async function collect(events: AsyncGenerator<RouterEvent>): Promise<RouterEvent[]> {
+  const seen: RouterEvent[] = []
+  for await (const event of events) seen.push(event)
+  return seen
+}
+
+const textOf = (events: readonly RouterEvent[]): string =>
+  events.flatMap((e) => (e.kind === 'delta' ? [e.content] : [])).join('')
+
+const answeredBy = (events: readonly RouterEvent[]): string | undefined =>
+  events.flatMap((e) => (e.kind === 'selected' ? [e.providerId] : []))[0]
+
+const signal = () => new AbortController().signal
+const rateLimited = (id: string, retryAfter: number | null = null) =>
+  new ProviderHttpError(id, 429, retryAfter, `${id} rate limited`)
+
+describe('runFailover', () => {
+  it('moves to the next provider when the first is rate limited', async () => {
+    const first = fakeProvider({ id: 'alpha', priority: 1, failWith: rateLimited('alpha') })
+    const second = fakeProvider({
+      id: 'beta',
+      priority: 2,
+      chunks: [
+        { kind: 'delta', content: 'answer from beta' },
+        { kind: 'stop', finishReason: 'stop' },
+      ],
+    })
+    const { deps, cooldowns } = harness([first, second])
+
+    const events = await collect(runFailover(deps, REQUEST, signal()))
+
+    expect(answeredBy(events)).toBe('beta')
+    expect(textOf(events)).toBe('answer from beta')
+    expect(await cooldowns.isCoolingDown('alpha')).toBe(true)
+  })
+
+  it('reports every attempt when all providers are rate limited', async () => {
+    const providers = [
+      fakeProvider({ id: 'alpha', priority: 1, failWith: rateLimited('alpha') }),
+      fakeProvider({ id: 'beta', priority: 2, failWith: rateLimited('beta') }),
+    ]
+    const { deps } = harness(providers)
+
+    const error = await collect(runFailover(deps, REQUEST, signal())).catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(AllProvidersFailedError)
+    expect((error as AllProvidersFailedError).attempts).toEqual([
+      { providerId: 'alpha', reason: 'rate_limit', detail: 'alpha rate limited' },
+      { providerId: 'beta', reason: 'rate_limit', detail: 'beta rate limited' },
+    ])
+  })
+
+  it('stops the chain on an auth error instead of silently skipping', async () => {
+    const broken = fakeProvider({
+      id: 'alpha',
+      priority: 1,
+      failWith: new ProviderHttpError('alpha', 401, null, 'invalid api key'),
+    })
+    const healthy = fakeProvider({ id: 'beta', priority: 2 })
+    const { deps } = harness([broken, healthy])
+
+    const error = await collect(runFailover(deps, REQUEST, signal())).catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(ProviderAuthError)
+    expect((error as ProviderAuthError).providerId).toBe('alpha')
+    expect(healthy.calls).toHaveLength(0)
+  })
+
+  it('skips providers with no key and never calls them', async () => {
+    const unconfigured = fakeProvider({ id: 'alpha', priority: 1 })
+    const configured = fakeProvider({ id: 'beta', priority: 2 })
+    const { deps } = harness([unconfigured, configured], { keyless: ['alpha'] })
+
+    const events = await collect(runFailover(deps, REQUEST, signal()))
+
+    expect(answeredBy(events)).toBe('beta')
+    expect(unconfigured.calls).toHaveLength(0)
+  })
+
+  it('skips a provider that is still cooling down', async () => {
+    const cooling = fakeProvider({ id: 'alpha', priority: 1 })
+    const available = fakeProvider({ id: 'beta', priority: 2 })
+    const { deps, cooldowns } = harness([cooling, available])
+    await cooldowns.startCooldown('alpha', 60)
+
+    const events = await collect(runFailover(deps, REQUEST, signal()))
+
+    expect(answeredBy(events)).toBe('beta')
+    expect(cooling.calls).toHaveLength(0)
+  })
+
+  it('uses the provider retry-after instead of the default cooldown', async () => {
+    let now = 1_000_000
+    const cooldowns = new MemoryCooldownStore(() => now)
+    const deps: FailoverDeps = {
+      providers: [
+        fakeProvider({ id: 'alpha', priority: 1, failWith: rateLimited('alpha', 5) }),
+        fakeProvider({ id: 'beta', priority: 2 }),
+      ],
+      keyFor: (p) => `key-${p.id}`,
+      cooldowns,
+      recordUsage: async () => {},
+      firstTokenTimeoutMs: 5_000,
+      cooldownSeconds: 60,
+      now: () => now,
+    }
+
+    await collect(runFailover(deps, REQUEST, signal()))
+
+    now += 4_000
+    expect(await cooldowns.isCoolingDown('alpha')).toBe(true)
+
+    // Past the 5s retry-after but nowhere near the 60s default, so this only
+    // passes if the header won.
+    now += 2_000
+    expect(await cooldowns.isCoolingDown('alpha')).toBe(false)
+  })
+
+  it('fails over when the first token does not arrive in time', async () => {
+    const slow = fakeProvider({ id: 'alpha', priority: 1, firstChunkDelayMs: 300 })
+    const quick = fakeProvider({ id: 'beta', priority: 2 })
+    const { deps } = harness([slow, quick], { firstTokenTimeoutMs: 25 })
+
+    const events = await collect(runFailover(deps, REQUEST, signal()))
+
+    expect(answeredBy(events)).toBe('beta')
+  })
+
+  it('does not switch provider once the stream has started', async () => {
+    const breaksLate = fakeProvider({
+      id: 'alpha',
+      priority: 1,
+      chunks: [{ kind: 'delta', content: 'partial' }],
+      failMidStreamWith: new ProviderHttpError('alpha', 500, null, 'died mid-stream'),
+    })
+    const backup = fakeProvider({ id: 'beta', priority: 2 })
+    const { deps } = harness([breaksLate, backup])
+
+    const seen: RouterEvent[] = []
+    const error = await (async () => {
+      try {
+        for await (const event of runFailover(deps, REQUEST, signal())) seen.push(event)
+        return null
+      } catch (e: unknown) {
+        return e
+      }
+    })()
+
+    expect(error).toBeInstanceOf(MidStreamError)
+    expect(textOf(seen)).toBe('partial')
+    expect(backup.calls).toHaveLength(0)
+  })
+
+  it('skips a provider that does not offer the requested model', async () => {
+    const wrongModel = fakeProvider({ id: 'alpha', priority: 1, models: ['only-this'] })
+    const rightModel = fakeProvider({ id: 'beta', priority: 2, models: ['wanted'] })
+    const { deps } = harness([wrongModel, rightModel])
+
+    const events = await collect(runFailover(deps, { ...REQUEST, model: 'wanted' }, signal()))
+
+    expect(answeredBy(events)).toBe('beta')
+    expect(wrongModel.calls).toHaveLength(0)
+  })
+
+  it('pins a provider when the model is qualified with a provider id', async () => {
+    const alpha = fakeProvider({ id: 'alpha', priority: 1, models: ['shared'] })
+    const beta = fakeProvider({ id: 'beta', priority: 2, models: ['shared'] })
+    const { deps } = harness([alpha, beta])
+
+    const events = await collect(runFailover(deps, { ...REQUEST, model: 'beta:shared' }, signal()))
+
+    expect(answeredBy(events)).toBe('beta')
+    expect(alpha.calls).toHaveLength(0)
+  })
+})
+
+describe('usage recording', () => {
+  it('records token counts and latency for a completed request', async () => {
+    const provider = fakeProvider({ id: 'alpha', priority: 1 })
+    const { deps, recorded } = harness([provider])
+
+    await collect(runFailover(deps, REQUEST, signal()))
+
+    expect(recorded).toHaveLength(1)
+    expect(recorded[0]).toMatchObject({
+      providerId: 'alpha',
+      model: 'm1',
+      inputTokens: 11,
+      outputTokens: 7,
+      status: 200,
+      source: 'router',
+    })
+  })
+
+  it('carries no prompt or response content, only the fields constraint 3 allows', async () => {
+    const provider = fakeProvider({
+      id: 'alpha',
+      priority: 1,
+      chunks: [
+        { kind: 'delta', content: 'a very secret answer' },
+        { kind: 'stop', finishReason: 'stop' },
+      ],
+    })
+    const { deps, recorded } = harness([provider])
+
+    await collect(runFailover(deps, REQUEST, signal()))
+
+    expect(Object.keys(recorded[0] ?? {}).sort()).toEqual([
+      'at',
+      'inputTokens',
+      'latencyMs',
+      'model',
+      'outputTokens',
+      'providerId',
+      'source',
+      'status',
+    ])
+    expect(JSON.stringify(recorded)).not.toContain('secret')
+  })
+
+  it('still records usage when the stream dies part way through', async () => {
+    const provider = fakeProvider({
+      id: 'alpha',
+      priority: 1,
+      chunks: [{ kind: 'delta', content: 'partial' }],
+      failMidStreamWith: new ProviderHttpError('alpha', 500, null, 'boom'),
+    })
+    const { deps, recorded } = harness([provider])
+
+    await collect(runFailover(deps, REQUEST, signal())).catch(() => undefined)
+
+    expect(recorded).toHaveLength(1)
+    expect(recorded[0]?.status).toBe(500)
+  })
+})
