@@ -17,7 +17,7 @@ All seven phases of [SPEC.md](SPEC.md) are built.
 | | | |
 |---|---|---|
 | Router core: providers, failover, streaming | done | 29 tests |
-| Web app: Google auth, Postgres, encrypted key vault, chat with history, admin dashboard | done | 22 tests |
+| Web app: accounts, Postgres, encrypted key vault, chat with history, dashboard, admin | done | 32 tests |
 | Extension: sign-in through the site, side panel, BYOK direct mode, page context, context menu | done | 9 tests |
 | Savings counter | done | 18 tests |
 | Ship: licence, CI, icons, store listing | done | |
@@ -58,8 +58,9 @@ providers directly.
 pnpm install
 ```
 
-Then set up the web app. Copy `.env.example` to `apps/web/.env.local` and fill
-in a database URL, Google OAuth credentials, and an encryption key:
+Then set up the web app. Copy `.env.example` to `apps/web/.env.local`. It needs
+a database URL, a session secret and an encryption key; Google credentials are
+optional and only add a second way to sign in.
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
@@ -162,6 +163,20 @@ to see the range; the wording stays "estimated cost", never "money earned".
 
 Re-check the prices periodically and update the `checkedOn` stamps.
 
+## Accounts
+
+Email and password, or Google, into the same account. Passwords are hashed with
+scrypt from `node:crypto` — a memory-hard KDF that ships with the runtime, so no
+bcrypt or argon2 dependency. Parameters are stored in the envelope, so they can
+be raised later without locking anyone out.
+
+Google is optional. With no `AUTH_GOOGLE_ID` the sign-in page simply omits the
+button; email and password still work, and the rest of the site does not care.
+
+Everything a signed-in person needs is under `/dashboard`: an overview with
+usage and savings, provider key connections, sign-in and connected devices, and
+usage history. `/chat` is the chat itself.
+
 ## Privacy properties held by the code
 
 - Provider keys are encrypted with AES-256-GCM before they reach Postgres. The
@@ -174,6 +189,9 @@ Re-check the prices periodically and update the `checkedOn` stamps.
 - The admin dashboard never joins to the messages table, and 404s for anyone
   not in `ADMIN_EMAILS`.
 - One account cannot load another's conversation. There is a test for it.
+- Passwords are stored as scrypt hashes. Sign-in fails identically for a wrong
+  password, an unknown address and a Google-only account, so it cannot be used
+  to find out who has registered — with a decoy hash so the timing matches too.
 - The demo cap is claimed with a conditional upsert. A test fires 25 concurrent
   requests at a limit of 10 and asserts exactly 10 get through.
 

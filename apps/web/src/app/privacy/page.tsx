@@ -3,6 +3,13 @@ export default function PrivacyPage() {
     <main className="wrap">
       <h1>What we store</h1>
 
+      <h2>Your account</h2>
+      <p>
+        We store your email address, and your name if you give one. If you sign in with a password,
+        we store a scrypt hash of it and never the password itself, so it cannot be read back out of
+        the database. Signing in with Google stores no password at all.
+      </p>
+
       <h2>Your conversations</h2>
       <p>
         Messages you send and the replies you receive are saved to your account so you can come back

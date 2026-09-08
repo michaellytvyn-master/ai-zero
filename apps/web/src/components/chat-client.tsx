@@ -142,7 +142,7 @@ export default function ChatClient(props: {
           {!props.usingOwnKeys && remaining !== null && (
             <span>
               {remaining} of {props.demoLimit} free messages left today ·{' '}
-              <Link href="/account">add your own key</Link>
+              <Link href="/dashboard/keys">add your own key</Link>
             </span>
           )}
           {props.usingOwnKeys && <span>running on your own keys</span>}
@@ -175,7 +175,7 @@ export default function ChatClient(props: {
                   Get a free {item.label} key
                 </a>
               ))}
-              <Link href="/account">
+              <Link href="/dashboard/keys">
                 <button type="button" className="primary">
                   Add it here
                 </button>

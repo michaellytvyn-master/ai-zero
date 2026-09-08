@@ -23,7 +23,7 @@ export default async function SavingsPage({
   const savings = savingsFrom(await usageTotalsForUser(userId), model)
 
   return (
-    <main className="wrap">
+    <>
       <h1>What this would have cost</h1>
 
       <div className="card">
@@ -40,7 +40,7 @@ export default async function SavingsPage({
 
       <div className="row" style={{ flexWrap: 'wrap', marginBottom: 18 }}>
         {referenceModels.map((entry) => (
-          <Link key={entry.id} href={`/savings?model=${entry.id}`}>
+          <Link key={entry.id} href={`/dashboard/usage?model=${entry.id}`}>
             <button type="button" className={entry.id === model.id ? 'primary' : ''}>
               vs {entry.label}
             </button>
@@ -92,6 +92,6 @@ export default async function SavingsPage({
         Failed requests are left out: they produced no tokens, so counting them would inflate the
         number without measuring anything.
       </p>
-    </main>
+    </>
   )
 }

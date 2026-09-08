@@ -132,7 +132,7 @@ export default function App() {
           </button>
         )}
         <span className="spacer" />
-        <a href={`${SITE_URL}/account`} target="_blank" rel="noreferrer">
+        <a href={`${SITE_URL}/dashboard/keys`} target="_blank" rel="noreferrer">
           Keys
         </a>
         <button
@@ -176,7 +176,7 @@ export default function App() {
               </a>
             </div>
           ))}
-          <a href={`${SITE_URL}/account`} target="_blank" rel="noreferrer">
+          <a href={`${SITE_URL}/dashboard/keys`} target="_blank" rel="noreferrer">
             Then add it to your account
           </a>
         </div>

@@ -64,3 +64,31 @@ export function bearerToken(request: Request): string | null {
 function hash(token: string): string {
   return createHash('sha256').update(token).digest('hex')
 }
+
+export interface ExtensionSessionRow {
+  readonly id: string
+  readonly createdAt: Date
+  readonly lastSeenAt: Date
+  readonly expiresAt: Date
+}
+
+export async function listExtensionSessions(userId: string): Promise<ExtensionSessionRow[]> {
+  return db()
+    .select({
+      id: extensionSessions.id,
+      createdAt: extensionSessions.createdAt,
+      lastSeenAt: extensionSessions.lastSeenAt,
+      expiresAt: extensionSessions.expiresAt,
+    })
+    .from(extensionSessions)
+    .where(and(eq(extensionSessions.userId, userId), isNull(extensionSessions.revokedAt)))
+    .orderBy(extensionSessions.lastSeenAt)
+}
+
+/** Scoped by user id as well as row id, so one account cannot revoke another's. */
+export async function revokeExtensionSessionById(userId: string, id: string): Promise<void> {
+  await db()
+    .update(extensionSessions)
+    .set({ revokedAt: new Date() })
+    .where(and(eq(extensionSessions.id, id), eq(extensionSessions.userId, userId)))
+}

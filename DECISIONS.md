@@ -264,3 +264,49 @@ This also closed a gap in hard constraint 2, which requires the shared demo
 pool to use the smallest model only. It was never enforced. `effectiveModel()`
 now clamps demo requests to `smallestFreeModelId()`, and the picker is disabled
 with an explanation for users who have not added a key.
+
+## 19. Email and password, alongside Google
+
+SPEC.md §2 forbade an auth system, §1 then asked for Google. Neither described a
+password login, so the first build had Google only — which meant no account at
+all when Google was not configured. That is not a usable product.
+
+Both methods now land on the same account:
+
+- **Passwords are hashed with scrypt from `node:crypto`.** A memory-hard KDF
+  that ships with the runtime, so no bcrypt or argon2 dependency, per SPEC.md
+  §14. N=2^15, r=8, and `maxmem` raised because 128·N·r is exactly Node's
+  default ceiling. The envelope records its own parameters, so they can be
+  raised later without invalidating existing hashes.
+- **Sessions moved from database to JWT.** Auth.js cannot issue a database
+  session from a credentials provider, and running two session models would be
+  worse. The extension's bearer tokens are unaffected — they were always
+  separate.
+- **Google keeps `allowDangerousEmailAccountLinking`.** It is only dangerous
+  when the provider does not verify email ownership; Google does. Without it,
+  registering with an address and later using Google on the same address
+  produces two accounts.
+- **Failures are indistinguishable.** A wrong password, an unknown address and
+  a Google-only account all return the same null, and an unknown address is
+  compared against a decoy hash so the response time matches. Otherwise sign-in
+  becomes a way to enumerate who has an account.
+
+Google is now optional rather than required. Without it the sign-in page omits
+the button and everything else is unchanged.
+
+## 20. One dashboard, not scattered pages
+
+`/account` and `/savings` were top-level pages reached from a link bar, and the
+landing page was three buttons. Everything belonging to a signed-in person now
+lives under `/dashboard` with its own sidebar:
+
+- `/dashboard` — requests, estimated cost avoided, tokens, remaining free
+  messages, which providers are connected, recent chats
+- `/dashboard/keys` — provider connections
+- `/dashboard/settings` — password, and the browser extensions signed in to the
+  account, each revocable
+- `/dashboard/usage` — savings and the per-provider breakdown
+
+The landing page is a real page: what it is, how it works in three steps, every
+model on offer with its context size, how the savings estimate is calculated and
+why it is deliberately conservative, and what is stored.

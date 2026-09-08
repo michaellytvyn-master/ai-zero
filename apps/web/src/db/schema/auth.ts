@@ -10,6 +10,8 @@ export const users = pgTable('user', {
   email: text('email').unique().notNull(),
   emailVerified: timestamp('emailVerified', { mode: 'date' }),
   image: text('image'),
+  /** null for accounts that only ever signed in with Google. */
+  passwordHash: text('password_hash'),
   createdAt: timestamp('createdAt', { mode: 'date' }).notNull().defaultNow(),
 })
 

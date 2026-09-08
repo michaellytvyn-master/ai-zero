@@ -1,9 +1,17 @@
 import { DrizzleAdapter } from '@auth/drizzle-adapter'
 import NextAuth, { type Session } from 'next-auth'
+import Credentials from 'next-auth/providers/credentials'
 import Google from 'next-auth/providers/google'
+import { z } from 'zod'
 import { isDatabaseConfigured, isGoogleConfigured, isSessionConfigured } from './config'
 import { db } from './db'
 import { accounts, sessions, users, verificationTokens } from './db/schema'
+import { authenticate } from './lib/accounts'
+
+const credentialsSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+})
 
 export const { handlers, auth, signIn, signOut } = NextAuth(() => ({
   adapter: DrizzleAdapter(db(), {
@@ -12,14 +20,44 @@ export const { handlers, auth, signIn, signOut } = NextAuth(() => ({
     sessionsTable: sessions,
     verificationTokensTable: verificationTokens,
   }),
-  // Configuring Google is what turns sign-in on. Without it the rest of the
-  // site still renders; only the sign-in page changes what it says.
-  providers: isGoogleConfigured() ? [Google] : [],
-  session: { strategy: 'database' },
+  providers: [
+    Credentials({
+      id: 'password',
+      name: 'Email and password',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
+      },
+      async authorize(raw) {
+        const parsed = credentialsSchema.safeParse(raw)
+        if (!parsed.success) return null
+        return authenticate(parsed.data.email, parsed.data.password)
+      },
+    }),
+    // Configuring Google adds a second way in. Without it, email and password
+    // still work, and the sign-in page simply omits the button.
+    ...(isGoogleConfigured()
+      ? [
+          Google({
+            // Safe here specifically because Google verifies email ownership:
+            // it lets one person use both methods for the same address instead
+            // of ending up with two accounts.
+            allowDangerousEmailAccountLinking: true,
+          }),
+        ]
+      : []),
+  ],
+  // Credentials sign-in cannot use database sessions, so both methods share the
+  // JWT strategy. The extension has its own bearer tokens either way.
+  session: { strategy: 'jwt' },
   pages: { signIn: '/signin' },
   callbacks: {
-    session({ session, user }) {
-      session.user.id = user.id
+    jwt({ token, user }) {
+      if (user?.id !== undefined) token.sub = user.id
+      return token
+    },
+    session({ session, token }) {
+      if (typeof token.sub === 'string') session.user.id = token.sub
       return session
     },
   },
@@ -31,9 +69,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth(() => ({
  * than a stack trace on every page.
  */
 export async function safeAuth(): Promise<Session | null> {
-  // Reading a session needs a secret and a database. The Google credentials
-  // only decide whether a new session can be started, so gating on them here
-  // would log everyone out the moment sign-in was reconfigured.
   if (!isSessionConfigured() || !isDatabaseConfigured()) return null
   try {
     return await auth()

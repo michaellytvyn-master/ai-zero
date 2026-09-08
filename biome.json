@@ -1,9 +1,22 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.12/schema.json",
   "files": {
-    "includes": ["**", "!**/dist", "!**/.next", "!**/node_modules", "!**/drizzle"]
+    "includes": [
+      "**",
+      "!**/dist",
+      "!**/.next",
+      "!**/node_modules",
+      "!**/drizzle",
+      "!**/next-env.d.ts"
+    ]
   },
-  "assist": { "actions": { "source": { "organizeImports": "off" } } },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "off"
+      }
+    }
+  },
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
@@ -23,13 +36,20 @@
       "preset": "recommended",
       "suspicious": {
         "noExplicitAny": "error",
-        "noConsole": { "level": "off", "options": { "allow": ["log"] } }
+        "noConsole": {
+          "level": "off",
+          "options": {
+            "allow": ["log"]
+          }
+        }
       },
       "style": {
         "useNamingConvention": "off",
         "noNonNullAssertion": "error"
       },
-      "complexity": { "noForEach": "off" }
+      "complexity": {
+        "noForEach": "off"
+      }
     }
   }
 }

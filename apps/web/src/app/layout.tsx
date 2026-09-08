@@ -19,15 +19,21 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <nav className="nav">
           <Link href="/">Zero-Cost AI</Link>
           {email !== null && <Link href="/chat">Chat</Link>}
-          {email !== null && <Link href="/account">Keys</Link>}
-          {email !== null && <Link href="/savings">Saved</Link>}
+          {email !== null && <Link href="/dashboard">Dashboard</Link>}
           {isAdminSafe(email) && <Link href="/admin">Admin</Link>}
           <span className="spacer" />
           <Link href="/privacy" className="muted">
             Privacy
           </Link>
           {email === null ? (
-            <Link href="/signin">Sign in</Link>
+            <>
+              <Link href="/signin">Sign in</Link>
+              <Link href="/register">
+                <button className="primary" type="button" style={{ padding: '5px 12px' }}>
+                  Sign up
+                </button>
+              </Link>
+            </>
           ) : (
             <span className="muted">{email}</span>
           )}
