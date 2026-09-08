@@ -1,7 +1,9 @@
 import { notFound, redirect } from 'next/navigation'
 import { auth } from '@/auth'
 import { isAdmin } from '@/config'
+import { formatUsd, referenceModel, savingsFrom } from '@zca/pricing'
 import { dailyRows, providerRows, userRows } from '@/lib/admin'
+import { usageTotalsForEveryone } from '@/lib/savings'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,7 +14,14 @@ export default async function AdminPage() {
   // 404 rather than 403: a non-admin should not learn the page exists.
   if (!isAdmin(email)) notFound()
 
-  const [people, providers, days] = await Promise.all([userRows(), providerRows(), dailyRows()])
+  const [people, providers, days, totals] = await Promise.all([
+    userRows(),
+    providerRows(),
+    dailyRows(),
+    usageTotalsForEveryone(),
+  ])
+  const model = referenceModel()
+  const savings = savingsFrom(totals, model)
 
   return (
     <main className="wrap" style={{ maxWidth: 1100 }}>
@@ -21,6 +30,14 @@ export default async function AdminPage() {
         Metadata only. Conversation content is never shown here and is not queryable from this
         page.
       </p>
+
+      <div className="card">
+        <div style={{ fontSize: 28, fontWeight: 600 }}>{formatUsd(savings.microUsd)}</div>
+        <p className="muted" style={{ margin: '4px 0 0' }}>
+          Estimated cost of all {savings.requests.toLocaleString()} answered requests if they had
+          run on {model.label} instead. An estimate, not a bill.
+        </p>
+      </div>
 
       <h2>Providers</h2>
       <table>

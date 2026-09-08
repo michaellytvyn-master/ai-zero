@@ -1,0 +1,36 @@
+{
+  "note": "Reference prices for the savings estimate. Every entry carries the date it was read and the page it came from; re-check before trusting a number that is more than a few months old.",
+  "defaultModelId": "gpt-5-mini",
+  "models": [
+    {
+      "id": "gpt-5-mini",
+      "label": "GPT-5 mini",
+      "vendor": "OpenAI",
+      "inputPerMillionUsd": 0.25,
+      "outputPerMillionUsd": 2.0,
+      "checkedOn": "2026-09-08",
+      "source": "https://developers.openai.com/api/docs/pricing",
+      "why": "Closest paid equivalent to the small open models the free tiers actually serve, so it is the default and the estimate stays a floor rather than a boast."
+    },
+    {
+      "id": "claude-sonnet-5",
+      "label": "Claude Sonnet 5",
+      "vendor": "Anthropic",
+      "inputPerMillionUsd": 2.0,
+      "outputPerMillionUsd": 10.0,
+      "checkedOn": "2026-09-08",
+      "source": "https://claude.com/pricing",
+      "why": "A mainstream mid-tier chat model, for comparison against something people actually pay for day to day."
+    },
+    {
+      "id": "gpt-5.5",
+      "label": "GPT-5.5",
+      "vendor": "OpenAI",
+      "inputPerMillionUsd": 5.0,
+      "outputPerMillionUsd": 30.0,
+      "checkedOn": "2026-09-08",
+      "source": "https://developers.openai.com/api/docs/pricing",
+      "why": "An upper bound. Free small models are not equivalent to a flagship, so this figure flatters the total and is never the default."
+    }
+  ]
+}

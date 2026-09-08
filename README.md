@@ -12,23 +12,24 @@ The brief is [SPEC.md](SPEC.md). Where the build departs from it, and why, is
 
 ## Status
 
-Router, web app and the extension are working. The savings counter is next.
+Router, web app, extension and the savings counter are working.
 
 | | | |
 |---|---|---|
 | Router core: providers, failover, streaming | done | 29 tests |
 | Web app: Google auth, Postgres, encrypted key vault, chat with history, admin dashboard | done | 22 tests |
 | Extension: sign-in through the site, side panel, BYOK direct mode, page context, context menu | done | 9 tests |
-| Savings counter | not started | |
+| Savings counter | done | 18 tests |
 | Ship: store listing, CI, licence | not started | |
 
-60 tests in total; 18 of them run against a real Postgres.
+78 tests in total; 22 of them run against a real Postgres.
 
 ## Layout
 
 ```
 packages/
   shared/       types, zod schemas and the named-event SSE reader
+  pricing/      dated reference prices + the savings arithmetic
   providers/    one file per provider + the shared OpenAI-compatible helper
   router-core/  failover state machine and a runtime-agnostic HTTP handler
 apps/
@@ -123,6 +124,27 @@ that ranking predates the change.
 Both Mistral's and Groq's terms explicitly permit serving end users through
 your own application, and forbid transferring keys to them. Demo mode is the
 former; it is never the latter.
+
+## The savings counter
+
+`/savings` on the site, and a badge in the extension panel, showing what the
+same token counts would have cost on a paid model.
+
+It is computed from the `usage_event` table, so the site and the extension
+always agree. Three things keep it honest, and tests hold two of them in place:
+
+- the default reference is the **cheapest** model in `packages/pricing/src/prices.json`,
+  because free tiers serve small open models and pricing them against a
+  flagship would inflate the figure without measuring anything different
+- every price carries the date it was read and the page it came from
+- failed requests are excluded — no tokens, no cost, and counting them would
+  pad the request number with answers nobody received
+
+Arithmetic is in integer micro-dollars, so the per-provider breakdown sums
+exactly to the headline figure. You can switch the reference model on the page
+to see the range; the wording stays "estimated cost", never "money earned".
+
+Re-check the prices periodically and update the `checkedOn` stamps.
 
 ## Privacy properties held by the code
 

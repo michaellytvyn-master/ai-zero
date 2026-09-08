@@ -172,3 +172,28 @@ therefore refuses any `redirect_uri` that does not match
 `https://<32 letters a-p>.chromiumapp.org/`, because a laxer check would make
 the page an open redirect that leaks a bearer token. A `state` value is echoed
 back and compared in the extension.
+
+## 15. The savings counter reads from the database, and defaults to the cheapest reference
+
+SPEC.md §8 stored totals in `chrome.storage.local` / `localStorage` because
+there was no server-side record. Decisions 1, 4 and 10 moved usage into
+Postgres, so the counter is computed from `usage_event` instead. That makes it
+consistent across devices and between the site and the extension, and it is
+the same table the admin dashboard reads — one source of truth, no drift.
+
+Three honesty properties are deliberate, and two of them are enforced by tests:
+
+- **The default reference is the cheapest model in the table.** The free tiers
+  serve small open models; pricing them against a flagship would inflate every
+  user's total without measuring anything different. A test asserts the default
+  is the cheapest entry, so it cannot be quietly changed.
+- **Every price carries the date it was read and the page it came from.** A
+  test asserts both are present on every entry.
+- **Failed requests are excluded.** They produced no tokens, so they cost
+  nothing; counting them would pad the request number with answers nobody got.
+
+Arithmetic is in integer micro-dollars rather than floating point, so the
+per-provider breakdown always sums exactly to the headline figure.
+
+Copy is fixed as "estimated cost if the same tokens had run on X ... an
+estimate, not money you earned", per SPEC.md §8.

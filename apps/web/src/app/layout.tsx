@@ -20,6 +20,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <Link href="/">Zero-Cost AI</Link>
           {email !== null && <Link href="/chat">Chat</Link>}
           {email !== null && <Link href="/account">Keys</Link>}
+          {email !== null && <Link href="/savings">Saved</Link>}
           {isAdminSafe(email) && <Link href="/admin">Admin</Link>}
           <span className="spacer" />
           <Link href="/privacy" className="muted">

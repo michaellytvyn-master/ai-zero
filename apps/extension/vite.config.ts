@@ -12,6 +12,7 @@ export default defineConfig({
       '@zca/shared': here('../../packages/shared/src/index.ts'),
       '@zca/providers': here('../../packages/providers/src/index.ts'),
       '@zca/router-core': here('../../packages/router-core/src/index.ts'),
+      '@zca/pricing': here('../../packages/pricing/src/index.ts'),
     },
   },
   build: {

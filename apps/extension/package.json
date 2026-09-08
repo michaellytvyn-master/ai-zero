@@ -13,7 +13,8 @@
     "@zca/shared": "workspace:*",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "@zca/router-core": "workspace:*"
+    "@zca/router-core": "workspace:*",
+    "@zca/pricing": "workspace:*"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.287",

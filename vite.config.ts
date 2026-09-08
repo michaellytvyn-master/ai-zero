@@ -10,6 +10,7 @@ export default defineConfig({
       '@zca/shared': pkg('shared'),
       '@zca/providers': pkg('providers'),
       '@zca/router-core': pkg('router-core'),
+      '@zca/pricing': pkg('pricing'),
       '@': fileURLToPath(new URL('./apps/web/src', import.meta.url)),
     },
   },

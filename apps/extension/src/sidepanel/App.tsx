@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { formatUsd, type Savings } from '@zca/pricing'
 import type { ChatMessage } from '@zca/shared'
 import { streamChat, usesOwnKeys, type ChatEvent } from '@/lib/chat'
 import { SITE_URL } from '@/lib/config'
 import { asQuotedContext, readActivePage } from '@/lib/page-context'
+import { loadSavings } from '@/lib/savings'
 import { loadSession, signOut, startSignIn, type Session } from '@/lib/session'
+import SavingsPanel from './SavingsPanel'
 
 type Turn = { role: 'user' | 'assistant'; content: string }
 type Exhausted = { label: string; url: string }[]
@@ -16,10 +19,15 @@ export default function App() {
   const [provider, setProvider] = useState<string | null>(null)
   const [exhausted, setExhausted] = useState<Exhausted | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [savings, setSavings] = useState<Savings | null>(null)
+  const [showSavings, setShowSavings] = useState(false)
   const log = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    void loadSession().then((found) => setSession(found))
+    void loadSession().then(async (found) => {
+      setSession(found)
+      if (found !== null) setSavings(await loadSavings(found))
+    })
   }, [])
 
   // The context menu drops the selected text here before opening the panel.
@@ -54,7 +62,11 @@ export default function App() {
     }
 
     setBusy(false)
-    void loadSession().then((refreshed) => refreshed !== null && setSession(refreshed))
+    void loadSession().then(async (refreshed) => {
+      if (refreshed === null) return
+      setSession(refreshed)
+      setSavings(await loadSavings(refreshed))
+    })
   }, [busy, draft, session, turns])
 
   async function addPageContext() {
@@ -98,6 +110,15 @@ export default function App() {
         <span className="badge">{ownKeys ? 'your keys' : `demo ${session.demo?.remaining ?? 0} left`}</span>
         {provider !== null && <span className="badge">via {provider}</span>}
         {session.stale && <span className="badge">offline</span>}
+        {savings !== null && (
+          <button
+            className="badge"
+            style={{ padding: '2px 7px', cursor: 'pointer' }}
+            onClick={() => setShowSavings((open) => !open)}
+          >
+            saved {formatUsd(savings.microUsd)}
+          </button>
+        )}
         <span className="spacer" />
         <a href={`${SITE_URL}/account`} target="_blank" rel="noreferrer">
           Keys
@@ -127,6 +148,8 @@ export default function App() {
           </div>
         ))}
       </div>
+
+      {showSavings && savings !== null && <SavingsPanel savings={savings} />}
 
       {exhausted !== null && (
         <div className="notice">
