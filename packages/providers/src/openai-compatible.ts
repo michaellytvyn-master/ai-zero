@@ -91,7 +91,10 @@ export function openAICompatibleChat(
 function buildBody(config: OpenAICompatibleConfig, req: ChatRequest): Record<string, unknown> {
   return {
     model: req.model,
-    messages: req.messages,
+    // Rebuilt field by field rather than passed through. Structural typing lets
+    // a caller hand us objects carrying extra properties — a React key, say —
+    // and providers reject the whole request when they arrive on the wire.
+    messages: req.messages.map((message) => ({ role: message.role, content: message.content })),
     stream: true,
     ...(req.temperature !== null ? { temperature: req.temperature } : {}),
     ...(req.maxTokens !== null ? { max_tokens: req.maxTokens } : {}),

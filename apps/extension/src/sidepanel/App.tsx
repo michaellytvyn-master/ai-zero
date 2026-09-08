@@ -57,7 +57,10 @@ export default function App() {
     setError(null)
     setExhausted(null)
 
-    const history: ChatMessage[] = [...turns, { role: 'user' as const, content }]
+    const history: ChatMessage[] = [...turns, { role: 'user' as const, content }].map((turn) => ({
+      role: turn.role,
+      content: turn.content,
+    }))
     setTurns((previous) => [
       ...previous,
       { id: crypto.randomUUID(), role: 'user', content },
