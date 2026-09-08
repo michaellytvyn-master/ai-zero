@@ -160,6 +160,17 @@ Groq's terms explicitly permit serving end users through your own application
 and forbid transferring keys to them; Cloudflare's do not restrict it. Demo
 mode is the former; it is never the latter.
 
+## Response modes
+
+Under the composer, on both the site and the panel: **Eco** (400 tokens),
+**Thinking** (1 500) and **Max** (4 000). Each sets a system instruction and a
+hard `max_tokens` ceiling — the wording is a request, the ceiling is what
+actually protects a metered free tier.
+
+The definitions live in `@zca/shared`, applied server-side by `/api/chat` and
+client-side by the extension before it calls a provider directly, so the two
+surfaces cannot drift apart.
+
 ## The savings counter
 
 `/savings` on the site, and a badge in the extension panel, showing what the

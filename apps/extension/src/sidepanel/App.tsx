@@ -107,6 +107,7 @@ export default function App() {
       signedIn,
       history,
       chat.model,
+      chat.responseMode,
       new AbortController().signal,
     )) {
       if (event.kind === 'delta') answer += event.content
@@ -212,6 +213,8 @@ export default function App() {
         models={pickableModels(session)}
         model={chat.model}
         onModel={(model) => patchChat({ model })}
+        responseMode={chat.responseMode}
+        onResponseMode={(responseMode) => patchChat({ responseMode })}
         showModelPicker={ownKeys}
         attached={attached}
       />

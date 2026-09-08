@@ -4,7 +4,8 @@
  *
  * STUB_SPEC="9001:429:groq,9002:stream:cloudflare"
  */
-import { createServer, type ServerResponse } from 'node:http'
+import { appendFileSync } from 'node:fs'
+import { type ServerResponse, createServer } from 'node:http'
 
 interface Stub {
   readonly port: number
@@ -21,6 +22,15 @@ const failures: Record<string, number> = { '429': 429, '401': 401, '500': 500 }
 
 for (const stub of stubs) {
   createServer((req, res) => {
+    // Lets a check assert what the router actually put on the wire.
+    if (process.env.STUB_LOG !== undefined) {
+      const chunks: Buffer[] = []
+      req.on('data', (chunk: Buffer) => chunks.push(chunk))
+      req.on('end', () => {
+        appendFileSync(process.env.STUB_LOG as string, `${Buffer.concat(chunks).toString()}\n`)
+      })
+    }
+
     const status = failures[stub.mode]
     if (status !== undefined) {
       const headers: Record<string, string> = { 'content-type': 'application/json' }

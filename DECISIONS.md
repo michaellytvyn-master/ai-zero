@@ -390,3 +390,32 @@ Consequences worth stating:
 
 Tabs that already exist when the extension is installed or the browser starts
 are bound in `onInstalled` and `onStartup`; new ones in `onCreated`.
+
+## 24. Three response modes, shared by both surfaces
+
+Free tiers are metered in tokens, so a model that answers a one-line question
+with five paragraphs is spending the day's allowance on padding. The control
+sits under the composer on the site and in the panel.
+
+| | Cap | Instruction |
+|---|---|---|
+| Eco | 400 tokens | answer in as few words as the question honestly needs |
+| Thinking | 1 500 | work it through, then state the conclusion plainly |
+| Max | 4 000 | complete answer, edge cases, examples, reasoning |
+
+Two things make this real rather than decorative:
+
+- **The cap is `max_tokens`, not just wording.** A prompt asking for brevity is
+  a request; the cap is what actually protects the allowance when a model
+  ignores it.
+- **The definitions live in `@zca/shared`.** The site applies them server-side
+  in `/api/chat`; the extension applies them before it calls the provider
+  directly. One table, so the two surfaces cannot drift.
+
+The mode's instruction goes ahead of any system message the caller already
+added, because page context is material to read, not an instruction that should
+override how to answer. A caller that set `maxTokens` deliberately keeps it.
+
+The site remembers the choice in `localStorage` — a preference about how you
+like answers, not a property of any one conversation. The extension keeps it per
+tab, alongside that tab's model and page setting.

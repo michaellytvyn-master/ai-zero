@@ -1,6 +1,13 @@
 import { createCloudflare, createGroq, type Provider } from '@zca/providers'
 import { MemoryCooldownStore, runFailover, type ProviderKey } from '@zca/router-core'
-import { readSse, type ChatMessage, type UsageEvent } from '@zca/shared'
+import type { ChatRequest } from '@zca/shared'
+import {
+  type ChatMessage,
+  type ResponseMode,
+  type UsageEvent,
+  applyResponseMode,
+  readSse,
+} from '@zca/shared'
 import { SITE_URL } from './config'
 import type { Session } from './session'
 
@@ -25,10 +32,12 @@ export async function* streamChat(
   session: Session,
   messages: readonly ChatMessage[],
   model: string,
+  mode: ResponseMode,
   signal: AbortSignal,
 ): AsyncGenerator<ChatEvent> {
-  if (usesOwnKeys(session)) yield* streamDirect(session, messages, model, signal)
-  else yield* streamViaRouter(session, messages, model, signal)
+  const request = applyResponseMode({ model, messages, temperature: null, maxTokens: null }, mode)
+  if (usesOwnKeys(session)) yield* streamDirect(session, request, signal)
+  else yield* streamViaRouter(session, request, signal)
 }
 
 /**
@@ -38,8 +47,7 @@ export async function* streamChat(
  */
 async function* streamDirect(
   session: Session,
-  messages: readonly ChatMessage[],
-  model: string,
+  request: ChatRequest,
   signal: AbortSignal,
 ): AsyncGenerator<ChatEvent> {
   const keyed = session.providers.filter((provider) => provider.key !== null)
@@ -63,7 +71,7 @@ async function* streamDirect(
       cooldownSeconds: 60,
       now: Date.now,
     },
-    { model, messages, temperature: null, maxTokens: null },
+    request,
     signal,
   )
 
@@ -82,15 +90,21 @@ async function* streamDirect(
 
 async function* streamViaRouter(
   session: Session,
-  messages: readonly ChatMessage[],
-  model: string,
+  request: ChatRequest,
   signal: AbortSignal,
 ): AsyncGenerator<ChatEvent> {
   const response = await fetch(`${SITE_URL}/api/v1/chat/completions`, {
     method: 'POST',
     signal,
     headers: { authorization: `Bearer ${session.token}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ model, messages, stream: true }),
+    // max_tokens and messages are both standard, so the router needs no
+    // special case for response modes.
+    body: JSON.stringify({
+      model: request.model,
+      messages: request.messages,
+      max_tokens: request.maxTokens,
+      stream: true,
+    }),
   })
 
   if (!response.ok || response.body === null) {

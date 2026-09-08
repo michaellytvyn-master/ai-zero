@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { failureResponse, runFailover, type RouterEvent } from '@zca/router-core'
+import { applyResponseMode, responseMode } from '@zca/shared'
 import { UnauthenticatedError, requireUser } from '@/auth'
 import { runtimeConfig } from '@/config'
 import {
@@ -19,6 +20,7 @@ const schema = z.object({
   conversationId: z.string().uuid().optional(),
   content: z.string().min(1).max(32_000),
   model: z.string().min(1).default('auto'),
+  mode: z.string().optional(),
 })
 
 /** The app's own chat: same failover, but the conversation is persisted. */
@@ -50,12 +52,15 @@ export async function POST(request: Request): Promise<Response> {
 
     const events = runFailover(
       deps,
-      {
-        model: effectiveModel(parsed.data.model, usingOwnKeys),
-        messages: [...history, { role: 'user', content: parsed.data.content }],
-        temperature: null,
-        maxTokens: null,
-      },
+      applyResponseMode(
+        {
+          model: effectiveModel(parsed.data.model, usingOwnKeys),
+          messages: [...history, { role: 'user', content: parsed.data.content }],
+          temperature: null,
+          maxTokens: null,
+        },
+        responseMode(parsed.data.mode).id,
+      ),
       request.signal,
     )
 

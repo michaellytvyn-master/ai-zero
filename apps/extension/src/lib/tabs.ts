@@ -1,3 +1,4 @@
+import { DEFAULT_RESPONSE_MODE, type ResponseMode } from '@zca/shared'
 import type { PageMode } from './page-context'
 
 export interface TabChat {
@@ -6,6 +7,7 @@ export interface TabChat {
   readonly draft: string
   readonly model: string
   readonly pageMode: PageMode
+  readonly responseMode: ResponseMode
 }
 
 export const EMPTY_TAB_CHAT: TabChat = {
@@ -13,6 +15,7 @@ export const EMPTY_TAB_CHAT: TabChat = {
   draft: '',
   model: 'auto',
   pageMode: 'off',
+  responseMode: DEFAULT_RESPONSE_MODE,
 }
 
 export interface OwnTab {

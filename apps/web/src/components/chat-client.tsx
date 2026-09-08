@@ -2,20 +2,16 @@
 
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ModelChoice } from '@zca/providers'
-import { readSse } from '@zca/shared'
-import ModelPicker from './model-picker'
+import { DEFAULT_RESPONSE_MODE, type ResponseMode, isResponseMode, readSse } from '@zca/shared'
+import ConversationList from './conversation-list'
+import MessageLog from './message-log'
+import ChatControls from './chat-controls'
+import { type Turn, appendToLast, replaceLast } from './turn'
+import KeyPrompt from './key-prompt'
 
-interface Turn {
-  id: string
-  role: 'system' | 'user' | 'assistant'
-  content: string
-  provider?: string | null
-  model?: string | null
-}
-
-interface KeyPrompt {
+interface SignupOption {
   providerId: string
   label: string
   signupUrl: string
@@ -38,9 +34,30 @@ export default function ChatClient(props: {
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
   const [provider, setProvider] = useState<string | null>(null)
-  const [needsKey, setNeedsKey] = useState<KeyPrompt[] | null>(null)
+  const [needsKey, setNeedsKey] = useState<SignupOption[] | null>(null)
   const [remaining, setRemaining] = useState(props.demoRemaining)
   const [model, setModel] = useState(props.initialModel)
+  // Remembered per browser: how you like answers is a preference, not a
+  // property of any one conversation.
+  const [mode, setMode] = useState<ResponseMode>(DEFAULT_RESPONSE_MODE)
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('responseMode')
+      if (isResponseMode(saved)) setMode(saved)
+    } catch {
+      // Private windows and blocked storage both land here; the default is fine.
+    }
+  }, [])
+
+  function chooseMode(next: ResponseMode) {
+    setMode(next)
+    try {
+      localStorage.setItem('responseMode', next)
+    } catch {
+      // Failing to remember the choice must not stop them making it.
+    }
+  }
   const conversationId = useRef(props.activeId)
 
   async function send() {
@@ -62,13 +79,14 @@ export default function ChatClient(props: {
       body: JSON.stringify({
         content,
         model,
+        mode,
         ...(conversationId.current !== null && { conversationId: conversationId.current }),
       }),
     })
 
     if (!response.ok || response.body === null) {
       const body = (await response.json().catch(() => null)) as {
-        error?: { type?: string; message?: string; addYourOwnKey?: KeyPrompt[] }
+        error?: { type?: string; message?: string; addYourOwnKey?: SignupOption[] }
       } | null
       if (body?.error?.type === 'demo_exhausted') {
         setNeedsKey(body.error.addYourOwnKey ?? [])
@@ -111,30 +129,7 @@ export default function ChatClient(props: {
     <main
       style={{ display: 'grid', gridTemplateColumns: '220px 1fr', minHeight: 'calc(100vh - 52px)' }}
     >
-      <aside style={{ borderRight: '1px solid var(--border)', padding: 14, overflowY: 'auto' }}>
-        <Link href="/chat">
-          <button type="button" style={{ width: '100%', marginBottom: 12 }}>
-            New chat
-          </button>
-        </Link>
-        {props.conversations.map((item) => (
-          <Link
-            key={item.id}
-            href={`/chat?c=${item.id}`}
-            style={{
-              display: 'block',
-              padding: '7px 9px',
-              borderRadius: 7,
-              fontSize: 13,
-              textDecoration: 'none',
-              color: item.id === props.activeId ? 'var(--text)' : 'var(--muted)',
-              background: item.id === props.activeId ? 'var(--surface)' : 'transparent',
-            }}
-          >
-            {item.title}
-          </Link>
-        ))}
-      </aside>
+      <ConversationList conversations={props.conversations} activeId={props.activeId} />
 
       <section style={{ display: 'flex', flexDirection: 'column', padding: 20, gap: 14 }}>
         <div className="row muted" style={{ fontSize: 13 }}>
@@ -148,48 +143,17 @@ export default function ChatClient(props: {
           {props.usingOwnKeys && <span>running on your own keys</span>}
         </div>
 
-        <div
-          style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}
-        >
-          {turns.map((turn, index) => (
-            <div key={turn.id} className="card" style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-              <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>
-                {turn.role}
-                {turn.provider != null && ` · ${turn.provider}`}
-                {turn.model != null && ` · ${turn.model}`}
-              </div>
-              {turn.content || (busy && index === turns.length - 1 ? '…' : '')}
-            </div>
-          ))}
-        </div>
+        <MessageLog turns={turns} busy={busy} />
 
-        {needsKey !== null && (
-          <div className="card">
-            <strong>You have used today&apos;s free messages.</strong>
-            <p className="muted" style={{ marginBottom: 8 }}>
-              Add a free key of your own and this cap stops applying to you.
-            </p>
-            <div className="row" style={{ flexWrap: 'wrap' }}>
-              {needsKey.map((item) => (
-                <a key={item.providerId} href={item.signupUrl} target="_blank" rel="noreferrer">
-                  Get a free {item.label} key
-                </a>
-              ))}
-              <Link href="/dashboard/keys">
-                <button type="button" className="primary">
-                  Add it here
-                </button>
-              </Link>
-            </div>
-          </div>
-        )}
+        {needsKey !== null && <KeyPrompt providers={needsKey} />}
 
-        <ModelPicker
+        <ChatControls
+          mode={mode}
+          onMode={chooseMode}
           models={props.models}
-          value={props.usingOwnKeys ? model : 'auto'}
-          onChange={setModel}
-          disabled={!props.usingOwnKeys}
-          disabledReason="the shared pool runs the smallest model; add your own key to choose"
+          model={model}
+          onModel={setModel}
+          usingOwnKeys={props.usingOwnKeys}
         />
 
         <div className="row">
@@ -212,16 +176,4 @@ export default function ChatClient(props: {
       </section>
     </main>
   )
-}
-
-function appendToLast(turns: Turn[], chunk: string): Turn[] {
-  const last = turns[turns.length - 1]
-  if (last === undefined) return turns
-  return [...turns.slice(0, -1), { ...last, content: last.content + chunk }]
-}
-
-function replaceLast(turns: Turn[], content: string): Turn[] {
-  const last = turns[turns.length - 1]
-  if (last === undefined) return turns
-  return [...turns.slice(0, -1), { ...last, content }]
 }

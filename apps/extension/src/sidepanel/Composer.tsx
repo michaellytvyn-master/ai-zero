@@ -1,3 +1,4 @@
+import { type ResponseMode, responseMode, responseModes } from '@zca/shared'
 import type { ModelOption } from '@/lib/models'
 import type { PageMode } from '@/lib/page-context'
 
@@ -12,8 +13,11 @@ export default function Composer(props: {
   model: string
   onModel: (id: string) => void
   showModelPicker: boolean
+  responseMode: ResponseMode
+  onResponseMode: (mode: ResponseMode) => void
   attached: string | null
 }) {
+  const spec = responseMode(props.responseMode)
   return (
     <div className="composer">
       <select
@@ -40,6 +44,24 @@ export default function Composer(props: {
           ))}
         </select>
       )}
+
+      <div className="row">
+        <select
+          value={props.responseMode}
+          onChange={(event) => props.onResponseMode(event.target.value as ResponseMode)}
+          aria-label="Response length"
+          style={{ flex: 1 }}
+        >
+          {responseModes.map((mode) => (
+            <option key={mode.id} value={mode.id}>
+              {mode.label} — {mode.hint}
+            </option>
+          ))}
+        </select>
+        <span className="muted" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
+          ≤{spec.maxTokens}t
+        </span>
+      </div>
 
       <textarea
         rows={3}
