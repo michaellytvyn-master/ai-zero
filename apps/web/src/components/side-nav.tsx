@@ -16,6 +16,7 @@ const LINKS = [
     items: [
       { href: '/dashboard/keys', label: 'Provider keys' },
       { href: '/dashboard/settings', label: 'Sign-in and devices' },
+      { href: '/dashboard/api', label: 'API keys' },
     ],
   },
   { group: 'Activity', items: [{ href: '/dashboard/usage', label: 'Usage and savings' }] },

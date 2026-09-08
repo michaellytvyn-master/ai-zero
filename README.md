@@ -162,6 +162,31 @@ Groq's terms explicitly permit serving end users through your own application
 and forbid transferring keys to them; Cloudflare's do not restrict it. Demo
 mode is the former; it is never the latter.
 
+## Images
+
+Ask for a picture with the toggle above the composer. Generation runs on
+Cloudflare's flux-1-schnell — 4.8 neurons a tile against 10 000 a day free, so
+about two thousand images — and the result is stored on Cloudinary.
+
+**Every image is deleted an hour after it is made.** The interface says so
+before you make one and counts down under each result. Download anything worth
+keeping. Set `CLOUDINARY_*` and `CRON_SECRET` to enable it; without them the
+feature is simply off.
+
+## Your own API
+
+`/dashboard/api` issues `zca_` keys for calling this service from your own code.
+The endpoint is OpenAI-compatible, so any client that accepts a base URL works:
+
+```bash
+curl https://your-domain/api/v1/chat/completions -H "Authorization: Bearer zca_..." -H "Content-Type: application/json" -d '{"model":"auto","messages":[{"role":"user","content":"hello"}]}'
+```
+
+Requests run on the provider keys **your** account holds, so it is a router in
+front of your own quota rather than a resale of anyone's. Keys are stored as
+hashes and shown once. An API key cannot create or revoke other keys — that
+needs a session, so a leaked key cannot entrench itself.
+
 ## Voice input
 
 A microphone button next to the composer on both surfaces. Recording is capped

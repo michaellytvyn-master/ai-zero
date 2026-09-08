@@ -527,3 +527,46 @@ appears in a real browser. `background.test.ts` reads the source and asserts
 there is no await before `open`, that `openOnTab` is not async, that no caller
 awaits it, and that the command listener does not look the tab up. Putting the
 await back fails two of them.
+
+## 31. Generated images, and why they expire
+
+Cloudflare's `@cf/black-forest-labs/flux-1-schnell` costs 4.8 neurons per
+512×512 tile against the 10 000/day free allowance — roughly two thousand
+pictures a day. The Leonardo models on the same platform cost 530 and 636
+neurons per tile, which would spend the day in about a dozen. That ratio is the
+whole reason flux is the default and the others are not offered.
+
+Images go to Cloudinary and are **deleted an hour after they are made**, by a
+sweep the schedule in `apps/web/vercel.json` calls every fifteen minutes. That
+is stated in the composer before the first image and counted down under each
+one, because a picture silently vanishing is worse than one that said it would.
+
+The sweep deletes at Cloudinary first and marks the row only on success, so a
+failed call is retried next time instead of leaving a file nobody will ever
+clean up. The endpoint is guarded by `CRON_SECRET`.
+
+The Cloudinary signature is a SHA-1 over parameters sorted by name, joined with
+`&`, followed by the secret. `cloudinary.test.ts` checks it against the worked
+example in Cloudinary's own documentation, which is the only way to be sure
+without an account.
+
+## 32. Users can call the service with their own keys
+
+`/api/v1/chat/completions` already spoke the OpenAI format and already ran on
+whichever provider keys the account holds. Making it usable from outside needed
+only a key of our own: `zca_`-prefixed, stored as a SHA-256 hash so the table
+cannot hand out working keys, shown once at creation.
+
+Three things are deliberate:
+
+- **An API key cannot create or revoke API keys.** That path requires a session,
+  so a leaked key cannot make itself permanent.
+- The `zca_` prefix distinguishes an API key from an extension token without a
+  database round trip, so one lookup serves both.
+- Requests made with a key run on that user's own provider keys and quota. This
+  is a router in front of their accounts, not a resale of ours — which is also
+  what keeps it inside Groq's and Cloudflare's terms.
+
+`/api/v1/models` and `/api/health` were built in `router-core` back in phase 1
+and never mounted as routes; the documentation page referenced a 404 until an
+end-to-end check caught it.

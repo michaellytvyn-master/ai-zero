@@ -1,13 +1,17 @@
 import { safeAuth } from '../auth'
-import { bearerToken, userForExtensionToken, type ExtensionUser } from './extension-auth'
+import { looksLikeApiKey, userForApiKey } from './api-keys'
+import { type ExtensionUser, bearerToken, userForExtensionToken } from './extension-auth'
 
 /**
- * The extension sends a bearer token; the site sends a session cookie. Routes
- * shared by both resolve the user through here.
+ * Three ways in, all landing on the same account: a session cookie from the
+ * site, an extension token, and an API key the user made for their own code.
+ * The key's prefix tells the last two apart without a database round trip.
  */
 export async function resolveUser(request: Request): Promise<ExtensionUser | null> {
   const token = bearerToken(request)
-  if (token !== null) return userForExtensionToken(token)
+  if (token !== null) {
+    return looksLikeApiKey(token) ? userForApiKey(token) : userForExtensionToken(token)
+  }
 
   const session = await safeAuth()
   const id = session?.user?.id

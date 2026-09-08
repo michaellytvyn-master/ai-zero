@@ -163,3 +163,25 @@ export const generatedImages = pgTable(
   },
   (table) => [index('generated_image_expiry').on(table.expiresAt)],
 )
+
+/**
+ * Keys users create to call this service from their own code. Only the hash is
+ * stored, so a database dump yields no working key; `prefix` is the visible
+ * part, enough to tell two keys apart in a list.
+ */
+export const apiKeys = pgTable(
+  'api_key',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    keyHash: text('key_hash').notNull().unique(),
+    prefix: text('prefix').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  },
+  (table) => [index('api_key_user').on(table.userId)],
+)
