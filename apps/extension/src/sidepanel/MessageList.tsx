@@ -10,9 +10,9 @@ export default function MessageList(props: {
     <div className="log" ref={props.logRef}>
       {props.turns.length === 0 && (
         <p className="empty">
-          This chat belongs to the tab you are on. Switch tabs and you get a separate one; come back
-          and this is still here. To ask about the page itself, change &ldquo;Do not read the
-          page&rdquo; below.
+          This chat belongs to this tab and stays here. Other tabs have no panel until you open one
+          there, and coming back finds this conversation where you left it. To ask about the page
+          itself, switch <strong>Page</strong> below to text or HTML.
         </p>
       )}
       {props.turns.map((turn) => (

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { loadConversation } from '@/lib/conversations'
+import { appendMessage, loadConversation } from '@/lib/conversations'
 import type { Session } from '@/lib/session'
 import {
   EMPTY_TAB_CHAT,
@@ -57,7 +57,25 @@ export function useTabChat(session: Session | null) {
         setChat({ ...stored, conversationId: null })
         setTurns([])
       } else {
-        setTurns(conversation.messages.filter((m) => m.role !== 'system').map(toTurn))
+        const restored = conversation.messages.filter((m) => m.role !== 'system').map(toTurn)
+        const pending = stored.pendingAnswer ?? ''
+        const alreadyStored = restored[restored.length - 1]?.content === pending
+
+        // A reply that was still arriving when the panel was destroyed never
+        // reached the database. Show it, and file it now.
+        if (pending.length > 0 && !alreadyStored) {
+          const turn = newTurn('assistant', pending)
+          restored.push(
+            stored.pendingAnsweredBy === null
+              ? turn
+              : { ...turn, answeredBy: stored.pendingAnsweredBy },
+          )
+          void appendMessage(session, stored.conversationId, {
+            role: 'assistant',
+            content: pending,
+          }).then(() => writeTabChat(tabId, { pendingAnswer: null, pendingAnsweredBy: null }))
+        }
+        setTurns(restored)
       }
       setLoading(false)
     })()

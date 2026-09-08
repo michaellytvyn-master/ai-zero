@@ -8,9 +8,15 @@ import { pickableModels } from '@/lib/models'
 import { asContextMessage, readPage } from '@/lib/page-context'
 import { loadSavings } from '@/lib/savings'
 import { type Session, loadSession } from '@/lib/session'
-import type { TabChat } from '@/lib/tabs'
+import { type TabChat, savePendingAnswer } from '@/lib/tabs'
 import { applyEvent } from './apply-event'
 import { type Turn, newTurn } from './turn'
+
+/** Often enough to survive a tab switch, rarely enough not to thrash storage. */
+const SAVE_EVERY_MS = 500
+
+const describe = (by: { providerId: string; model: string } | null): string | null =>
+  by === null ? null : `${by.providerId} · ${by.model}`
 
 export interface SendDeps {
   readonly session: Session | null
@@ -82,6 +88,8 @@ export function useSend(deps: SendDeps): () => Promise<void> {
 
     let answer = ''
     let answeredBy: { providerId: string; model: string } | null = null
+    let lastSaved = 0
+
     for await (const event of streamChat(
       session,
       history,
@@ -92,6 +100,13 @@ export function useSend(deps: SendDeps): () => Promise<void> {
       if (event.kind === 'delta') answer += event.content
       if (event.kind === 'provider') {
         answeredBy = { providerId: event.providerId, model: event.model }
+      }
+
+      // Chrome tears the panel down the moment the user leaves this tab, so
+      // the partial answer is parked where a fresh panel can pick it up.
+      if (deps.tabId !== null && Date.now() - lastSaved > SAVE_EVERY_MS) {
+        lastSaved = Date.now()
+        void savePendingAnswer(deps.tabId, answer, describe(answeredBy))
       }
       applyEvent(event, {
         setTurns: deps.setTurns,
@@ -108,6 +123,8 @@ export function useSend(deps: SendDeps): () => Promise<void> {
         ...(answeredBy ?? {}),
       })
     }
+    // Archived, so a returning panel must not restore it a second time.
+    if (deps.tabId !== null) await savePendingAnswer(deps.tabId, '', null)
 
     deps.setBusy(false)
     const refreshed = await loadSession()

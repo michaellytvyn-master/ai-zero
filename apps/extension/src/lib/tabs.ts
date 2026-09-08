@@ -8,6 +8,13 @@ export interface TabChat {
   readonly model: string
   readonly pageMode: PageMode
   readonly responseMode: ResponseMode
+  /**
+   * A reply still arriving when the panel was torn down. Chrome destroys the
+   * document as soon as the user leaves the tab, and the answer only reaches
+   * the database once it is complete, so it is kept here as it streams.
+   */
+  readonly pendingAnswer: string | null
+  readonly pendingAnsweredBy: string | null
 }
 
 export const EMPTY_TAB_CHAT: TabChat = {
@@ -16,6 +23,8 @@ export const EMPTY_TAB_CHAT: TabChat = {
   model: 'auto',
   pageMode: 'off',
   responseMode: DEFAULT_RESPONSE_MODE,
+  pendingAnswer: null,
+  pendingAnsweredBy: null,
 }
 
 export interface OwnTab {
@@ -85,4 +94,21 @@ export async function takePendingQuote(tabId: number): Promise<string | null> {
   if (quote === undefined || quote.length === 0) return null
   await chrome.storage.session.remove(`quote:${tabId}`)
   return quote
+}
+
+/**
+ * Written straight to storage rather than through readTabChat, because this
+ * runs on every few chunks of a stream and must not read the whole record back
+ * each time.
+ */
+export async function savePendingAnswer(
+  tabId: number,
+  answer: string,
+  answeredBy: string | null,
+): Promise<void> {
+  const stored = await chrome.storage.session.get(`tab:${tabId}`)
+  const current = (stored[`tab:${tabId}`] as TabChat | undefined) ?? EMPTY_TAB_CHAT
+  await chrome.storage.session.set({
+    [`tab:${tabId}`]: { ...current, pendingAnswer: answer, pendingAnsweredBy: answeredBy },
+  })
 }

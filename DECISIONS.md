@@ -489,3 +489,20 @@ Messages are bubbles: the user's aligned right in the accent tint, replies in
 bordered cards with the provider and model above them. The header carries
 status as pills, and the tab this chat belongs to sits on its own line under
 it. Verified in both light and dark against the built stylesheet.
+
+## 29. A reply interrupted by a tab switch is not lost
+
+Decision 26 made the panel belong to one tab, which exposed a gap in decision
+21: Chrome destroys the panel document as soon as the user leaves the tab, and
+the assistant's reply only reaches the database once it has finished streaming.
+Switching tabs mid-answer therefore lost the answer outright — precisely the
+case where "come back and it is still there" matters most.
+
+The reply is now parked in `chrome.storage.session` under the tab's own key as
+it streams, written at most twice a second so it survives the teardown without
+thrashing storage. A panel opening on that tab again restores the partial reply
+and files it in the database.
+
+It compares the parked text against the conversation's last message before
+filing, so a reply that did finish and was archived normally is not stored
+twice.
