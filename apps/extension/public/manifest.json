@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Chat on free LLM provider tiers, with automatic failover when one is rate limited.",
   "minimum_chrome_version": "116",
-  "permissions": ["sidePanel", "storage", "identity", "contextMenus", "activeTab", "scripting"],
+  "permissions": ["sidePanel", "storage", "identity", "contextMenus", "scripting", "tabs"],
   "host_permissions": [
     "http://localhost:3000/*",
     "https://api.groq.com/*",
@@ -40,5 +40,6 @@
     "32": "icons/32.png",
     "48": "icons/48.png",
     "128": "icons/128.png"
-  }
+  },
+  "optional_host_permissions": ["http://*/*", "https://*/*"]
 }

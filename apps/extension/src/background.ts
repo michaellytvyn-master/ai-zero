@@ -69,9 +69,12 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
         },
       })
     } catch (error) {
+      const message = error instanceof Error ? error.message : ''
       sendResponse({
         ok: false,
-        error: error instanceof Error ? error.message : 'Could not read that page.',
+        error: /permission|host/i.test(message)
+          ? 'This site has not been allowed yet. Switch page reading off and on again to grant it.'
+          : message || 'Could not read that page.',
       })
     }
   })()

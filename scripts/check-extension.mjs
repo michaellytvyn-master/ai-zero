@@ -51,9 +51,22 @@ for (const [size, path] of Object.entries(manifest.action?.default_icon ?? {})) 
   requireFile(path, `action.default_icon.${size}`)
 }
 
+for (const field of ['host_permissions', 'optional_host_permissions']) {
+  for (const origin of manifest[field] ?? []) {
+    if (!/^(https?:\/\/|<all_urls>)/.test(origin)) {
+      problems.push(`${field} entry "${origin}" is not a URL pattern`)
+    }
+  }
+}
+
+// Reading page contents needs an origin permission that is asked for, not one
+// granted at install. A broad pattern in host_permissions would be granted up
+// front, which is exactly what the optional list avoids.
 for (const origin of manifest.host_permissions ?? []) {
-  if (!/^(https?:\/\/|<all_urls>)/.test(origin)) {
-    problems.push(`host_permissions entry "${origin}" is not a URL pattern`)
+  if (origin === '<all_urls>' || /^https?:\/\/\*\/\*/.test(origin)) {
+    problems.push(
+      `host_permissions grants "${origin}" at install; it belongs in optional_host_permissions`,
+    )
   }
 }
 
@@ -67,3 +80,6 @@ console.log(`${manifest.name} ${manifest.version} is loadable.`)
 console.log(`Load unpacked from: ${dist.replace(/\/$/, '')}`)
 console.log(`  permissions:      ${(manifest.permissions ?? []).join(', ')}`)
 console.log(`  host permissions: ${(manifest.host_permissions ?? []).join(', ')}`)
+console.log(
+  `  asked for on use: ${(manifest.optional_host_permissions ?? []).join(', ') || 'none'}`,
+)

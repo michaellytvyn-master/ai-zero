@@ -337,3 +337,28 @@ Every one of those endpoints loads the conversation as the requesting user
 first, so another account gets 404 rather than 403 — a 403 would confirm the id
 exists. The append schema is strict, so a client cannot widen a stored message
 with fields of its own.
+
+## 22. Page access is asked for per site, not granted at install
+
+SPEC.md §9 says to prefer `activeTab` over broad host permissions. That was the
+right instinct and the wrong mechanism here: `activeTab` grants access only to
+the tab the user invoked the extension on, and it lapses on navigation. The
+panel outlives both — it stays open across tab switches and reads the page at
+send time — so Chrome answered with "Cannot access contents of the page".
+
+`activeTab` is gone. `http://*/*` and `https://*/*` sit in
+`optional_host_permissions`, which grants nothing at install. Switching page
+reading on calls `chrome.permissions.request` for **that one site's origin**;
+Chrome prompts, and declining flips the control back off with an explanation.
+
+The request fires straight from the click, without awaiting a `contains` check
+first, because Chrome only prompts inside a user gesture. An already-granted
+origin resolves true with no prompt, so the check would have bought nothing.
+
+Subdomains stay separate: granting `docs.example.com` does not cover
+`api.example.com`. `scripts/check-extension.mjs` fails the build if a broad
+pattern is ever moved into `host_permissions`, where it would be granted up
+front.
+
+`tabs` was added, because binding a chat to a tab and naming that tab needs its
+title and URL.

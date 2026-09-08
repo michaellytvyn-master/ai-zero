@@ -6,7 +6,8 @@ import { SITE_URL } from '@/lib/config'
 import { contextCharBudget } from '@/lib/context-budget'
 import { appendMessage, createConversation } from '@/lib/conversations'
 import { pickableModels } from '@/lib/models'
-import { asContextMessage, readActivePage } from '@/lib/page-context'
+import { asContextMessage, readActivePage, type PageMode } from '@/lib/page-context'
+import { describeSite, requestPageAccess } from '@/lib/permissions'
 import { loadSavings } from '@/lib/savings'
 import { type Session, loadSession, signOut } from '@/lib/session'
 import { applyEvent } from './apply-event'
@@ -136,6 +137,27 @@ export default function App() {
 
   const ownKeys = usesOwnKeys(session)
 
+  // Fired from the click itself, because Chrome only prompts inside a user
+  // gesture. Already-granted sites resolve true with no prompt.
+  const choosePageMode = (mode: PageMode) => {
+    if (mode === 'off' || tab === null) {
+      setError(null)
+      patchChat({ pageMode: mode })
+      return
+    }
+    void requestPageAccess(tab.url).then((granted) => {
+      if (granted) {
+        setError(null)
+        patchChat({ pageMode: mode })
+      } else {
+        patchChat({ pageMode: 'off' })
+        setError(
+          `Without access to ${describeSite(tab.url)} the page cannot be read. Chrome asks once per site.`,
+        )
+      }
+    })
+  }
+
   return (
     <>
       <Header
@@ -180,7 +202,7 @@ export default function App() {
         onSend={() => void send()}
         busy={busy}
         pageMode={chat.pageMode}
-        onPageMode={(pageMode) => patchChat({ pageMode })}
+        onPageMode={choosePageMode}
         models={pickableModels(session)}
         model={chat.model}
         onModel={(model) => patchChat({ model })}

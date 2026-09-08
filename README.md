@@ -110,6 +110,10 @@ unreadable") does not say which folder it wanted. Open the side panel from the t
 Ctrl/Cmd+Shift+Y, and sign in — it opens this site's authorize page, so the web
 app must be running first.
 
+Reading the page is off until you turn it on, and the first time you do on a
+given site Chrome asks whether to allow it. The extension ships with access to
+no website at all — grants are per site and Chrome remembers them.
+
 Each tab gets its own chat. Switch tabs and the panel switches with you; come
 back and the conversation is still there. Those chats are stored on your
 account, so they also show up on the site and survive closing the panel.
