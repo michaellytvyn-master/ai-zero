@@ -9,12 +9,15 @@ export interface PageContext {
   readonly originalLength: number
 }
 
-export async function readActivePage(
+/** Reads the panel's own tab, named explicitly, never "whichever is active". */
+export async function readPage(
+  tabId: number,
   mode: Exclude<PageMode, 'off'>,
   maxChars: number,
 ): Promise<PageContext> {
   const response = (await chrome.runtime.sendMessage({
     type: 'extract-page',
+    tabId,
     mode,
     maxChars,
   })) as { ok: true; page: PageContext } | { ok: false; error: string }

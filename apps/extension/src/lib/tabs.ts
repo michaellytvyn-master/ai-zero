@@ -15,24 +15,55 @@ export const EMPTY_TAB_CHAT: TabChat = {
   pageMode: 'off',
 }
 
-const key = (tabId: number): string => `tab:${tabId}`
-
-export interface ActiveTab {
+export interface OwnTab {
   readonly id: number
   readonly title: string
   readonly url: string
 }
 
-export async function currentTab(): Promise<ActiveTab | null> {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-  if (tab?.id === undefined) return null
-  return { id: tab.id, title: tab.title ?? '', url: tab.url ?? '' }
+/**
+ * The background worker gives each tab its own panel path, so a panel knows
+ * which tab it belongs to from its own URL. It never asks which tab is active:
+ * a panel must not follow the user to a different page.
+ */
+export function panelTabId(search: string = location.search): number | null {
+  const raw = new URLSearchParams(search).get('tabId')
+  // Strict, because parseInt would happily read "1.5" as 1 and "12x" as 12,
+  // and a panel pointed at the wrong tab reads the wrong page.
+  if (raw === null || !/^\d+$/.test(raw)) return null
+  const parsed = Number(raw)
+  return Number.isSafeInteger(parsed) ? parsed : null
 }
 
+export async function ownTab(tabId: number): Promise<OwnTab | null> {
+  try {
+    const tab = await chrome.tabs.get(tabId)
+    return { id: tabId, title: tab.title ?? '', url: tab.url ?? '' }
+  } catch {
+    return null
+  }
+}
+
+/** Fires when this panel's own tab navigates or retitles, and nothing else. */
+export function onOwnTabChanged(tabId: number, listener: (tab: OwnTab) => void): () => void {
+  const onUpdated = (updatedId: number, change: chrome.tabs.TabChangeInfo) => {
+    if (updatedId !== tabId) return
+    if (change.title === undefined && change.url === undefined) return
+    void ownTab(tabId).then((tab) => {
+      if (tab !== null) listener(tab)
+    })
+  }
+
+  chrome.tabs.onUpdated.addListener(onUpdated)
+  return () => chrome.tabs.onUpdated.removeListener(onUpdated)
+}
+
+const key = (tabId: number): string => `tab:${tabId}`
+
 /**
- * Session storage rather than local: tab ids are only meaningful for as long as
- * the browser is running, so bindings that outlived a restart would attach old
- * conversations to unrelated new tabs.
+ * Session storage rather than local: tab ids are only meaningful while the
+ * browser is running, so a binding that outlived a restart would attach an old
+ * conversation to an unrelated new tab.
  */
 export async function readTabChat(tabId: number): Promise<TabChat> {
   const stored = await chrome.storage.session.get(key(tabId))
@@ -44,30 +75,11 @@ export async function writeTabChat(tabId: number, patch: Partial<TabChat>): Prom
   await chrome.storage.session.set({ [key(tabId)]: { ...current, ...patch } })
 }
 
-export async function forgetTab(tabId: number): Promise<void> {
-  await chrome.storage.session.remove(key(tabId))
-}
-
-/** Fires when the user switches tabs, or navigates the tab they are on. */
-export function onActiveTabChanged(listener: (tab: ActiveTab) => void): () => void {
-  const announce = () => {
-    void currentTab().then((tab) => {
-      if (tab !== null) listener(tab)
-    })
-  }
-
-  const onActivated = () => announce()
-  const onUpdated = (_id: number, change: chrome.tabs.TabChangeInfo, tab: chrome.tabs.Tab) => {
-    if (tab.active && (change.title !== undefined || change.url !== undefined)) announce()
-  }
-
-  chrome.tabs.onActivated.addListener(onActivated)
-  chrome.tabs.onUpdated.addListener(onUpdated)
-  chrome.windows.onFocusChanged.addListener(onActivated)
-
-  return () => {
-    chrome.tabs.onActivated.removeListener(onActivated)
-    chrome.tabs.onUpdated.removeListener(onUpdated)
-    chrome.windows.onFocusChanged.removeListener(onActivated)
-  }
+/** Text the context menu captured for this tab before opening the panel. */
+export async function takePendingQuote(tabId: number): Promise<string | null> {
+  const stored = await chrome.storage.session.get(`quote:${tabId}`)
+  const quote = stored[`quote:${tabId}`] as string | undefined
+  if (quote === undefined || quote.length === 0) return null
+  await chrome.storage.session.remove(`quote:${tabId}`)
+  return quote
 }

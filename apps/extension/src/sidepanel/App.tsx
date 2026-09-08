@@ -6,9 +6,10 @@ import { SITE_URL } from '@/lib/config'
 import { contextCharBudget } from '@/lib/context-budget'
 import { appendMessage, createConversation } from '@/lib/conversations'
 import { pickableModels } from '@/lib/models'
-import { asContextMessage, readActivePage, type PageMode } from '@/lib/page-context'
+import { type PageMode, asContextMessage, readPage } from '@/lib/page-context'
 import { describeSite, requestPageAccess } from '@/lib/permissions'
 import { loadSavings } from '@/lib/savings'
+import { takePendingQuote } from '@/lib/tabs'
 import { type Session, loadSession, signOut } from '@/lib/session'
 import { applyEvent } from './apply-event'
 import Composer from './Composer'
@@ -33,7 +34,7 @@ export default function App() {
   const log = useRef<HTMLDivElement>(null)
 
   const signedIn = session ?? null
-  const { tab, chat, turns, setTurns, patchChat, startNewChat } = useTabChat(signedIn)
+  const { tabId, tab, chat, turns, setTurns, patchChat, startNewChat } = useTabChat(signedIn)
 
   useEffect(() => {
     void loadSession().then(async (found) => {
@@ -42,15 +43,13 @@ export default function App() {
     })
   }, [])
 
-  // The context menu drops the selected text here before opening the panel.
+  // The context menu stores the selection under this tab's own key.
   useEffect(() => {
-    void chrome.storage.local.get('pendingQuote').then(async (stored) => {
-      const quote = stored.pendingQuote as string | undefined
-      if (quote === undefined || quote.length === 0) return
-      await chrome.storage.local.remove('pendingQuote')
-      patchChat({ draft: `"""\n${quote}\n"""\n\n` })
+    if (tabId === null) return
+    void takePendingQuote(tabId).then((quote) => {
+      if (quote !== null) patchChat({ draft: `"""\n${quote}\n"""\n\n` })
     })
-  }, [patchChat])
+  }, [patchChat, tabId])
 
   useEffect(() => {
     const panel = log.current
@@ -73,10 +72,10 @@ export default function App() {
     }))
     setTurns((previous) => [...previous, newTurn('user', content), newTurn('assistant', '')])
 
-    if (chat.pageMode !== 'off') {
+    if (chat.pageMode !== 'off' && tabId !== null) {
       try {
         const budget = contextCharBudget(pickableModels(signedIn), chat.model)
-        const page = await readActivePage(chat.pageMode, budget)
+        const page = await readPage(tabId, chat.pageMode, budget)
         history.unshift({ role: 'system', content: asContextMessage(page) })
         setAttached(
           `${page.title || page.url} · ${page.mode} · ${page.content.length.toLocaleString()} chars${
@@ -130,7 +129,7 @@ export default function App() {
       setSession(refreshed)
       setSavings(await loadSavings(refreshed))
     })
-  }, [busy, chat, patchChat, setTurns, signedIn, turns])
+  }, [busy, chat, patchChat, setTurns, signedIn, tabId, turns])
 
   if (session === undefined) return <div className="centered muted">Loading…</div>
   if (session === null) return <SignIn onSignedIn={setSession} />
@@ -191,6 +190,13 @@ export default function App() {
           <a href={`${SITE_URL}/dashboard/keys`} target="_blank" rel="noreferrer">
             Then add it to your account
           </a>
+        </div>
+      )}
+
+      {tabId === null && (
+        <div className="notice">
+          This panel is not attached to a tab yet, so it cannot read the page or keep a chat of its
+          own. Reload the tab and open the panel again.
         </div>
       )}
 

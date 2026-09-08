@@ -1,15 +1,55 @@
 const ASK_AI = 'zca-ask-ai'
 
+/**
+ * Giving every tab its own panel path is what makes Chrome instantiate a
+ * separate side panel document per tab. Without a distinct path they share one
+ * document, and one chat follows the user from tab to tab.
+ */
+function panelPathFor(tabId: number): string {
+  return `sidepanel.html?tabId=${tabId}`
+}
+
+async function bindPanel(tabId: number, url: string | undefined): Promise<void> {
+  // Browser-internal pages cannot host a panel usefully, and Chrome errors on
+  // some of them, so they are left without one.
+  if (url !== undefined && /^(chrome|edge|about|devtools):/.test(url)) {
+    await chrome.sidePanel.setOptions({ tabId, enabled: false }).catch(() => undefined)
+    return
+  }
+  await chrome.sidePanel
+    .setOptions({ tabId, path: panelPathFor(tabId), enabled: true })
+    .catch(() => undefined)
+}
+
+async function bindEveryTab(): Promise<void> {
+  for (const tab of await chrome.tabs.query({})) {
+    if (tab.id !== undefined) await bindPanel(tab.id, tab.url)
+  }
+}
+
 chrome.runtime.onInstalled.addListener(() => {
   void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => undefined)
   chrome.contextMenus.create({ id: ASK_AI, title: 'Ask AI about "%s"', contexts: ['selection'] })
+  void bindEveryTab()
+})
+
+chrome.runtime.onStartup.addListener(() => void bindEveryTab())
+
+chrome.tabs.onCreated.addListener((tab) => {
+  if (tab.id !== undefined) void bindPanel(tab.id, tab.url)
+})
+
+chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
+  if (change.url !== undefined || change.status === 'loading') void bindPanel(tabId, tab.url)
 })
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (info.menuItemId !== ASK_AI || tab?.windowId === undefined) return
+  const tabId = tab?.id
+  const windowId = tab?.windowId
+  if (info.menuItemId !== ASK_AI || tabId === undefined || windowId === undefined) return
   void (async () => {
-    await chrome.storage.local.set({ pendingQuote: info.selectionText ?? '' })
-    await chrome.sidePanel.open({ windowId: tab.windowId })
+    await chrome.storage.session.set({ [`quote:${tabId}`]: info.selectionText ?? '' })
+    await chrome.sidePanel.open({ tabId, windowId })
   })()
 })
 
@@ -17,27 +57,39 @@ chrome.commands.onCommand.addListener((command) => {
   if (command !== 'open-panel') return
   void (async () => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-    if (tab?.windowId !== undefined) await chrome.sidePanel.open({ windowId: tab.windowId })
+    if (tab?.id !== undefined && tab.windowId !== undefined) {
+      await chrome.sidePanel.open({ tabId: tab.id, windowId: tab.windowId })
+    }
   })()
 })
 
+/** A closed tab's chat binding is dead weight; the conversation itself stays. */
+chrome.tabs.onRemoved.addListener((tabId) => {
+  void chrome.storage.session.remove([`tab:${tabId}`, `quote:${tabId}`])
+})
+
 /**
- * Extraction runs here rather than in the panel because the activeTab grant
- * lands on the extension when the user invokes it, and the service worker is
- * where scripting.executeScript can spend it. That keeps a broad host
- * permission out of the manifest.
+ * Extraction targets the tab the asking panel belongs to, not whichever tab is
+ * active, so a panel can never read a page other than its own.
  */
 chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
-  const request = message as { type?: string; mode?: string; maxChars?: number } | null
+  const request = message as {
+    type?: string
+    mode?: string
+    maxChars?: number
+    tabId?: number
+  } | null
   if (request?.type !== 'extract-page') return false
 
   void (async () => {
     try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-      if (tab?.id === undefined) {
-        sendResponse({ ok: false, error: 'No active tab to read.' })
+      const tabId = request.tabId
+      if (typeof tabId !== 'number') {
+        sendResponse({ ok: false, error: 'This panel is not attached to a tab.' })
         return
       }
+
+      const tab = await chrome.tabs.get(tabId)
       if (/^(chrome|edge|about|devtools|chrome-extension):/.test(tab.url ?? '')) {
         sendResponse({ ok: false, error: 'Browser pages cannot be read by extensions.' })
         return
@@ -45,7 +97,7 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
 
       const wantsHtml = request.mode === 'html'
       const [result] = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
+        target: { tabId },
         func: extract,
         args: [wantsHtml],
       })
@@ -72,7 +124,7 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
       const message = error instanceof Error ? error.message : ''
       sendResponse({
         ok: false,
-        error: /permission|host/i.test(message)
+        error: /permission|host|access/i.test(message)
           ? 'This site has not been allowed yet. Switch page reading off and on again to grant it.'
           : message || 'Could not read that page.',
       })
@@ -110,8 +162,3 @@ function extract(wantsHtml: boolean): { title: string; url: string; content: str
       .trim(),
   }
 }
-
-/** A closed tab's chat binding is dead weight; the conversation itself stays. */
-chrome.tabs.onRemoved.addListener((tabId) => {
-  void chrome.storage.session.remove(`tab:${tabId}`)
-})

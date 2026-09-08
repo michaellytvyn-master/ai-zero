@@ -362,3 +362,31 @@ front.
 
 `tabs` was added, because binding a chat to a tab and naming that tab needs its
 title and URL.
+
+## 23. A separate panel document per tab, not one that swaps state
+
+Decision 21 gave each tab its own conversation, but through a single shared
+panel document that swapped state on `tabs.onActivated`. That is not the same
+thing: one document means one React tree, one in-flight request, and a chat that
+is only ever *restored* onto a tab rather than living there.
+
+The background worker now assigns every tab its own panel path,
+`sidepanel.html?tabId=<id>`. A distinct path is what makes Chrome instantiate a
+separate side panel document per tab, so two tabs hold two genuinely independent
+panels, each with its own state and its own streaming request.
+
+Consequences worth stating:
+
+- The panel learns which tab it belongs to from its own URL and never asks which
+  tab is active. It therefore cannot follow the user to another page.
+- Page extraction names that tab id explicitly, so a panel can only ever read
+  its own tab — not whichever happens to be in front when the request lands.
+- The context menu stores its selection under `quote:<tabId>`, so a quote
+  captured on one tab cannot surface in another tab's composer.
+- Browser-internal pages get `enabled: false` rather than a panel that cannot
+  work.
+- `panelTabId` parses strictly. `parseInt` would read "1.5" as 1 and "12x" as
+  12, and a panel pointed at the wrong tab reads the wrong page.
+
+Tabs that already exist when the extension is installed or the browser starts
+are bound in `onInstalled` and `onStartup`; new ones in `onCreated`.

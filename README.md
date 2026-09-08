@@ -114,9 +114,11 @@ Reading the page is off until you turn it on, and the first time you do on a
 given site Chrome asks whether to allow it. The extension ships with access to
 no website at all — grants are per site and Chrome remembers them.
 
-Each tab gets its own chat. Switch tabs and the panel switches with you; come
-back and the conversation is still there. Those chats are stored on your
-account, so they also show up on the site and survive closing the panel.
+Each tab gets its own panel. Not one panel that remembers several chats — a
+separate document per tab, so two tabs are two independent panels with their own
+state and their own in-flight request. Open a new tab and you get a fresh chat
+there while the first keeps going. The chats are stored on your account, so they
+also show up on the site and survive closing the panel.
 
 Two modes, chosen automatically:
 
