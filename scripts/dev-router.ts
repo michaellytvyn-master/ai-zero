@@ -6,10 +6,10 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { Readable } from 'node:stream'
 import {
-  CEREBRAS_BASE_URL,
+  CLOUDFLARE_API_ROOT,
   GROQ_BASE_URL,
   MISTRAL_BASE_URL,
-  createCerebras,
+  createCloudflare,
   createGroq,
   createMistral,
   type Provider,
@@ -35,7 +35,7 @@ const config = {
 const providers: readonly Provider[] = [
   createMistral(process.env.MISTRAL_BASE_URL ?? MISTRAL_BASE_URL),
   createGroq(process.env.GROQ_BASE_URL ?? GROQ_BASE_URL),
-  createCerebras(process.env.CEREBRAS_BASE_URL ?? CEREBRAS_BASE_URL),
+  createCloudflare(process.env.CLOUDFLARE_API_ROOT ?? CLOUDFLARE_API_ROOT),
 ].sort((a, b) => a.priority - b.priority)
 
 const keyFor = (provider: Provider): ProviderKey | null => {

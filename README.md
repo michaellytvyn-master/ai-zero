@@ -119,19 +119,26 @@ The icons in `public/icons` are flat placeholder squares. Phase 7 replaces them.
 Verified 2026-09-08. Full sources and caveats in
 [docs/providers.md](docs/providers.md) — the figures in SPEC.md are stale.
 
-| Provider | Priority | Free tier | Verified free allowance |
+| Provider | Priority | Card needed | Verified free allowance |
 |---|---|---|---|
-| Mistral | 10 | yes, no card | ~1B tokens/month, Experiment tier |
-| Groq | 20 | yes, no card | 30 RPM, 1 000 RPD, 200K TPD |
-| Cerebras | 30 | **no longer** | $5 trial credit, card required, 30-day expiry |
+| Mistral | 10 | no | ~1B tokens/month, Experiment tier |
+| Groq | 20 | no | 30 RPM, 1 000 req/day, 200K tokens/day |
+| Cloudflare Workers AI | 30 | no | 10 000 neurons/day |
 
-Cerebras retired its no-card free tier in August 2026, so it is demoted to last
-and all its models are marked `free: false`. SPEC.md ranks it second on speed;
-that ranking predates the change.
+Nothing that needs a credit card ships. Cerebras was removed on 2026-09-08 when
+it retired its no-card tier, and a test asserts every registered model is on a
+free tier so one cannot creep back in.
 
-Both Mistral's and Groq's terms explicitly permit serving end users through
-your own application, and forbid transferring keys to them. Demo mode is the
-former; it is never the latter.
+Mistral has two caveats worth knowing before you use it: it asks for phone
+verification, and its free tier requires opting in to training on submitted
+content. Both are stated on `/privacy`.
+
+Cloudflare's credential is two values, `<account id>:<api token>`, because the
+account id is part of its URL.
+
+Mistral's and Groq's terms explicitly permit serving end users through your own
+application and forbid transferring keys to them; Cloudflare's do not restrict
+it. Demo mode is the former; it is never the latter.
 
 ## The savings counter
 
@@ -181,6 +188,7 @@ pnpm typecheck     # tsc across every package
 pnpm test          # unit tests; integration tests skip without a database
 pnpm test:db       # everything, against postgres://localhost:5432/zca_dev
 pnpm icons         # regenerate the extension icons
+node scripts/check-env.mjs   # .env.example must cover every configured variable
 ```
 
 CI runs all of the above plus both production builds. The integration suite

@@ -5,4 +5,11 @@ export * from './openai-compatible'
 export { sseData } from './sse'
 export { groq, createGroq, GROQ_BASE_URL } from './groq'
 export { mistral, createMistral, MISTRAL_BASE_URL } from './mistral'
-export { cerebras, createCerebras, CEREBRAS_BASE_URL } from './cerebras'
+export {
+  cloudflare,
+  createCloudflare,
+  cloudflareBaseUrl,
+  parseCloudflareCredential,
+  CloudflareCredentialError,
+  CLOUDFLARE_API_ROOT,
+} from './cloudflare'

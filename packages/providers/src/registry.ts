@@ -1,9 +1,9 @@
-import { cerebras } from './cerebras'
+import { cloudflare } from './cloudflare'
 import { groq } from './groq'
 import { mistral } from './mistral'
 import type { Provider } from './types'
 
-export const providers: readonly Provider[] = [mistral, groq, cerebras]
+export const providers: readonly Provider[] = [mistral, groq, cloudflare]
 
 export function orderedProviders(): readonly Provider[] {
   return [...providers].sort((a, b) => a.priority - b.priority)

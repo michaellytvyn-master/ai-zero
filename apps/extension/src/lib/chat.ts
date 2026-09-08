@@ -1,4 +1,4 @@
-import { createCerebras, createGroq, createMistral, type Provider } from '@zca/providers'
+import { createCloudflare, createGroq, createMistral, type Provider } from '@zca/providers'
 import { MemoryCooldownStore, runFailover, type ProviderKey } from '@zca/router-core'
 import { readSse, type ChatMessage, type UsageEvent } from '@zca/shared'
 import { SITE_URL } from './config'
@@ -7,7 +7,7 @@ import type { Session } from './session'
 const FACTORIES: Record<string, (baseUrl: string) => Provider> = {
   mistral: createMistral,
   groq: createGroq,
-  cerebras: createCerebras,
+  cloudflare: createCloudflare,
 }
 
 const cooldowns = new MemoryCooldownStore()

@@ -1,8 +1,8 @@
 import {
-  CEREBRAS_BASE_URL,
+  CLOUDFLARE_API_ROOT,
   GROQ_BASE_URL,
   MISTRAL_BASE_URL,
-  createCerebras,
+  createCloudflare,
   createGroq,
   createMistral,
   type Provider,
@@ -18,11 +18,20 @@ export function allProviders(): readonly Provider[] {
   return [
     createMistral(process.env.MISTRAL_BASE_URL ?? MISTRAL_BASE_URL),
     createGroq(process.env.GROQ_BASE_URL ?? GROQ_BASE_URL),
-    createCerebras(process.env.CEREBRAS_BASE_URL ?? CEREBRAS_BASE_URL),
+    createCloudflare(process.env.CLOUDFLARE_API_ROOT ?? CLOUDFLARE_API_ROOT),
   ].sort((a, b) => a.priority - b.priority)
 }
 
 function operatorKey(provider: Provider): string | null {
+  // Cloudflare needs the account id as well as the token, because the account
+  // id is part of the URL. The adapter takes them joined by a colon, which is
+  // also the form a user pastes into the account panel.
+  if (provider.id === 'cloudflare') {
+    const accountId = config().CF_ACCOUNT_ID?.trim()
+    const token = config().CF_API_TOKEN?.trim()
+    return accountId && token ? `${accountId}:${token}` : null
+  }
+
   const env = config() as unknown as Record<string, string | undefined>
   return env[provider.keyEnvVar]?.trim() || null
 }

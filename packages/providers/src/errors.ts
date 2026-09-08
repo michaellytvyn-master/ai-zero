@@ -14,8 +14,8 @@ export class ProviderHttpError extends Error {
 
 export function classifyHttpStatus(status: number): ErrorKind {
   if (status === 429) return 'rate_limit'
-  // Cerebras returns 402 once trial credits are spent. Cooling the provider
-  // down and moving on is right; aborting the whole chain is not.
+  // 402 means the account is out of allowance rather than misconfigured, so
+  // cooling the provider down and moving on is right; aborting the chain is not.
   if (status === 402) return 'rate_limit'
   if (status === 401 || status === 403) return 'auth'
   if (status === 408 || status >= 500) return 'transient'

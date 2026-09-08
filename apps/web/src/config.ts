@@ -15,7 +15,6 @@ const schema = z.object({
   EXTENSION_SESSION_GRACE_DAYS: z.coerce.number().int().positive().default(7),
   MISTRAL_API_KEY: z.string().optional(),
   GROQ_API_KEY: z.string().optional(),
-  CEREBRAS_API_KEY: z.string().optional(),
   CF_ACCOUNT_ID: z.string().optional(),
   CF_API_TOKEN: z.string().optional(),
 })

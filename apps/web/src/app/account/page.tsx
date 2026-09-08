@@ -26,6 +26,7 @@ export default async function AccountPage() {
           id: provider.id,
           label: provider.label,
           signupUrl: provider.signupUrl,
+          credentialHint: provider.credentialHint,
           free: provider.models.some((model) => model.free),
         }))}
         initialKeys={keys.map((key) => ({

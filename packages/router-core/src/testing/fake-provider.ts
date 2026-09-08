@@ -35,6 +35,7 @@ export function fakeProvider(spec: FakeSpec): FakeProvider {
     signupUrl: `https://example.test/${spec.id}`,
     keyEnvVar: `${spec.id.toUpperCase()}_API_KEY`,
     baseUrl: `https://example.test/${spec.id}/v1`,
+    credentialHint: 'API key',
     termsAllowServingEndUsers: true,
     models: modelIds.map((id) => ({ id, label: id, contextWindow: 4096, free: true })),
     calls,

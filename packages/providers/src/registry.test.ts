@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { groq, mistral, cerebras } from './index'
-import { orderedProviders, qualifiedModelIds, resolveModel } from './registry'
+import { cloudflare, groq, mistral } from './index'
+import { orderedProviders, providers, qualifiedModelIds, resolveModel } from './registry'
 
 describe('resolveModel', () => {
   it('maps auto onto each provider first model so failover can switch', () => {
     expect(resolveModel(groq, 'auto')).toBe('openai/gpt-oss-20b')
     expect(resolveModel(mistral, 'auto')).toBe('ministral-3-8b-2512')
+    expect(resolveModel(cloudflare, 'auto')).toBe('@cf/openai/gpt-oss-120b')
   })
 
   it('matches a bare model id against the provider catalogue', () => {
@@ -18,8 +19,11 @@ describe('resolveModel', () => {
     expect(resolveModel(mistral, 'groq:openai/gpt-oss-20b')).toBeNull()
   })
 
-  it('keeps slashes in Groq model ids intact, which is why the separator is a colon', () => {
+  it('keeps slashes in model ids intact, which is why the separator is a colon', () => {
     expect(resolveModel(groq, 'groq:openai/gpt-oss-20b')).toContain('/')
+    expect(resolveModel(cloudflare, 'cloudflare:@cf/meta/llama-3.1-8b-instruct')).toBe(
+      '@cf/meta/llama-3.1-8b-instruct',
+    )
   })
 
   it('rejects a qualified id whose model the provider does not offer', () => {
@@ -28,22 +32,39 @@ describe('resolveModel', () => {
 })
 
 describe('registry', () => {
-  it('runs Mistral first and Cerebras last', () => {
-    expect(orderedProviders().map((p) => p.id)).toEqual(['mistral', 'groq', 'cerebras'])
+  it('runs the largest free allowance first', () => {
+    expect(orderedProviders().map((p) => p.id)).toEqual(['mistral', 'groq', 'cloudflare'])
   })
 
-  it('marks Cerebras models as not free, since the no-card tier was retired', () => {
-    expect(cerebras.models.every((m) => m.free)).toBe(false)
-    expect(groq.models.every((m) => m.free)).toBe(true)
-    expect(mistral.models.every((m) => m.free)).toBe(true)
+  /**
+   * The project's whole premise. A provider that needs a payment method does
+   * not belong in the registry, however good it is — Cerebras was removed for
+   * exactly this after it retired its no-card tier in August 2026.
+   */
+  it('ships only providers whose models are reachable without a credit card', () => {
+    for (const provider of providers) {
+      expect(provider.models.length).toBeGreaterThan(0)
+      expect(
+        provider.models.every((model) => model.free),
+        `${provider.id} ships a model that is not on a free tier`,
+      ).toBe(true)
+    }
+  })
+
+  it('only ships providers whose terms allow serving end users', () => {
+    expect(providers.every((p) => p.termsAllowServingEndUsers)).toBe(true)
+  })
+
+  it('tells the user what each credential looks like', () => {
+    for (const provider of providers) {
+      expect(provider.credentialHint.length).toBeGreaterThan(0)
+      expect(provider.signupUrl).toMatch(/^https:\/\//)
+    }
   })
 
   it('exposes every model as a provider-qualified id', () => {
     expect(qualifiedModelIds()).toContain('groq:openai/gpt-oss-20b')
     expect(qualifiedModelIds()).toContain('mistral:ministral-3-8b-2512')
-  })
-
-  it('only ships providers whose terms allow serving end users', () => {
-    expect(orderedProviders().every((p) => p.termsAllowServingEndUsers)).toBe(true)
+    expect(qualifiedModelIds()).toContain('cloudflare:@cf/openai/gpt-oss-120b')
   })
 })

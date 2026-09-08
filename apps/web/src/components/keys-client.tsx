@@ -7,6 +7,7 @@ interface ProviderOption {
   id: string
   label: string
   signupUrl: string
+  credentialHint: string
   free: boolean
 }
 
@@ -66,7 +67,7 @@ export default function KeysClient(props: {
           <div key={provider.id} className="card">
             <div className="row">
               <strong>{provider.label}</strong>
-              {!provider.free && <span className="muted">no free tier — needs credit</span>}
+              <span className="muted">{provider.credentialHint}</span>
               <span className="spacer" style={{ marginLeft: 'auto' }} />
               <a href={provider.signupUrl} target="_blank" rel="noreferrer">
                 Get a key
@@ -94,7 +95,7 @@ export default function KeysClient(props: {
                 <input
                   type="password"
                   autoComplete="off"
-                  placeholder={`Paste your ${provider.label} key`}
+                  placeholder={`${provider.label}: ${provider.credentialHint}`}
                   value={drafts[provider.id] ?? ''}
                   onChange={(event) =>
                     setDrafts((previous) => ({ ...previous, [provider.id]: event.target.value }))

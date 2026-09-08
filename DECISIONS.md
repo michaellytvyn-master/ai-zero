@@ -197,3 +197,29 @@ per-provider breakdown always sums exactly to the headline figure.
 
 Copy is fixed as "estimated cost if the same tokens had run on X ... an
 estimate, not money you earned", per SPEC.md §8.
+
+## 16. A provider that needs a credit card does not ship
+
+The premise is that this costs nothing. A payment method is the point where
+that stops being true, however good the provider is, so the registry carries
+only providers reachable on a free tier without a card.
+
+Applied on 2026-09-08:
+
+- **Cerebras removed.** Its no-card tier was retired in August 2026, leaving $5
+  of trial credit behind a verified payment method. The adapter was deleted
+  rather than left dormant, so nothing can quietly re-enable it.
+- **Cloudflare Workers AI added.** 10 000 neurons/day, no card. Its model
+  identifiers were finally located in the pricing tables; the ones needing a
+  billing method (Kimi, GLM, DeepSeek v4) are deliberately excluded and a test
+  guards against them by name.
+- **Mistral kept.** No card. It does ask for phone verification and, on the
+  free tier, for permission to train on submitted content. Both are stated in
+  the README and on `/privacy` rather than glossed over.
+
+`registry.test.ts` asserts every shipped model is on a free tier, so this is
+enforced rather than remembered.
+
+Cloudflare's credential is two values because its account id sits inside the
+URL. The adapter takes `<account id>:<api token>` and splits it, keeping the
+special case in one file instead of widening the Provider interface.

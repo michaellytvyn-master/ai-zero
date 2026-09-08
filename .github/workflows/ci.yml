@@ -48,6 +48,9 @@ jobs:
       - name: Lint and format check
         run: pnpm lint
 
+      - name: Check .env.example covers the config schema
+        run: node scripts/check-env.mjs
+
       - name: Typecheck
         run: pnpm typecheck
 

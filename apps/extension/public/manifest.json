@@ -9,7 +9,7 @@
     "http://localhost:3000/*",
     "https://api.groq.com/*",
     "https://api.mistral.ai/*",
-    "https://api.cerebras.ai/*"
+    "https://api.cloudflare.com/*"
   ],
   "background": {
     "service_worker": "background.js",

@@ -12,7 +12,7 @@ trap cleanup EXIT
 STUB_SPEC="$1" pnpm exec vite-node scripts/stub-provider.ts >/tmp/zca-stub.log 2>&1 &
 STUB_PID=$!
 
-MISTRAL_API_KEY=stub-key GROQ_API_KEY=stub-key CEREBRAS_API_KEY= \
+MISTRAL_API_KEY=stub-key GROQ_API_KEY=stub-key CF_API_TOKEN= \
 MISTRAL_BASE_URL=http://localhost:9001/v1 \
 GROQ_BASE_URL=http://localhost:9002/v1 \
 FIRST_TOKEN_TIMEOUT_MS="${TIMEOUT_MS:-8000}" \

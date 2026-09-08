@@ -27,6 +27,7 @@ export async function GET(request: Request): Promise<Response> {
         id: provider.id,
         label: provider.label,
         signupUrl: provider.signupUrl,
+        credentialHint: provider.credentialHint,
         models: provider.models.map((model) => ({ id: model.id, label: model.label })),
         baseUrl: provider.baseUrl,
         key: keys.get(provider.id) ?? null,
