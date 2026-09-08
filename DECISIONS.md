@@ -506,3 +506,24 @@ and files it in the database.
 It compares the parked text against the conversation's last message before
 filing, so a reply that did finish and was archived normally is not stored
 twice.
+
+## 30. `sidePanel.open` runs inside the gesture, or not at all
+
+Opening the panel failed in Chrome with "`sidePanel.open()` may only be called
+in response to a user gesture". The call was correct; its position was not.
+`openOnTab` awaited `setOptions` and the badge update first, and a single await
+moves the rest of the function into a later task, by which point Chrome has
+discarded the gesture.
+
+`openOnTab` is now a plain function that issues `setOptions` and `open` without
+awaiting either. Chrome orders an extension's API calls, so enabling the tab
+immediately before opening it is safe. The badge follows afterwards, since it
+needs no gesture. The context menu writes its selection without awaiting for the
+same reason, and the keyboard command takes the tab from the event rather than
+calling `chrome.tabs.query`, which would also have to be awaited.
+
+This class of mistake compiles, lints and passes every other test, and only
+appears in a real browser. `background.test.ts` reads the source and asserts
+there is no await before `open`, that `openOnTab` is not async, that no caller
+awaits it, and that the command listener does not look the tab up. Putting the
+await back fails two of them.

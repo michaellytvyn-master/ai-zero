@@ -25,12 +25,21 @@ async function bindPanel(tabId: number, url: string | undefined): Promise<void> 
  * The panel opens only on the tab the user opened it on, and stays there.
  * Chrome would otherwise show it on every tab, so the global default is off and
  * tabs are enabled one at a time.
+ *
+ * Nothing here may be awaited before `open`. Chrome only accepts that call
+ * while the user gesture is still on the stack, and a single `await` — even on
+ * `setOptions` — is enough to lose it and fail with "may only be called in
+ * response to a user gesture". The calls are ordered by Chrome, so enabling the
+ * tab immediately before opening it is safe without awaiting.
  */
-async function openOnTab(tabId: number, windowId: number, url: string | undefined): Promise<void> {
+function openOnTab(tabId: number, windowId: number, url: string | undefined): void {
   if (url !== undefined && /^(chrome|edge|about|devtools):/.test(url)) return
-  await bindPanel(tabId, url)
-  await markActive(tabId, true)
-  await chrome.sidePanel.open({ tabId, windowId })
+
+  void chrome.sidePanel
+    .setOptions({ tabId, path: panelPathFor(tabId), enabled: true })
+    .catch(() => undefined)
+  void chrome.sidePanel.open({ tabId, windowId }).catch(() => undefined)
+  void markActive(tabId, true)
 }
 
 /** The badge is how a tab shows it has the panel attached. */
@@ -58,7 +67,7 @@ chrome.runtime.onStartup.addListener(() => void resetPanels())
 
 chrome.action.onClicked.addListener((tab) => {
   if (tab.id === undefined || tab.windowId === undefined) return
-  void openOnTab(tab.id, tab.windowId, tab.url)
+  openOnTab(tab.id, tab.windowId, tab.url)
 })
 
 // Navigating keeps the panel on its tab; only the path is re-asserted.
@@ -73,20 +82,18 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   const tabId = tab?.id
   const windowId = tab?.windowId
   if (info.menuItemId !== ASK_AI || tabId === undefined || windowId === undefined) return
-  void (async () => {
-    await chrome.storage.session.set({ [`quote:${tabId}`]: info.selectionText ?? '' })
-    await openOnTab(tabId, windowId, tab?.url)
-  })()
+
+  // Stored without awaiting, so the gesture survives to reach `open`. The panel
+  // takes far longer to load than this write takes to land.
+  void chrome.storage.session.set({ [`quote:${tabId}`]: info.selectionText ?? '' })
+  openOnTab(tabId, windowId, tab?.url)
 })
 
-chrome.commands.onCommand.addListener((command) => {
-  if (command !== 'open-panel') return
-  void (async () => {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-    if (tab?.id !== undefined && tab.windowId !== undefined) {
-      await openOnTab(tab.id, tab.windowId, tab.url)
-    }
-  })()
+// The tab comes with the event, so no lookup is needed — and a lookup would
+// have to be awaited, which would lose the gesture.
+chrome.commands.onCommand.addListener((command, tab) => {
+  if (command !== 'open-panel' || tab?.id === undefined || tab.windowId === undefined) return
+  openOnTab(tab.id, tab.windowId, tab.url)
 })
 
 /** A closed tab's chat binding is dead weight; the conversation itself stays. */
