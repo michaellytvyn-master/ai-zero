@@ -77,14 +77,14 @@ export default async function DashboardPage() {
       </Link>
 
       <h2 style={{ marginTop: 30 }}>Recent chats</h2>
-      {conversations.length === 0 ? (
+      {conversations.items.length === 0 ? (
         <p className="muted">
           Nothing yet. <Link href="/chat">Start a conversation</Link>.
         </p>
       ) : (
         <table>
           <tbody>
-            {conversations.slice(0, 8).map((conversation) => (
+            {conversations.items.slice(0, 8).map((conversation) => (
               <tr key={conversation.id}>
                 <td>
                   <Link href={`/chat?c=${conversation.id}`}>{conversation.title}</Link>

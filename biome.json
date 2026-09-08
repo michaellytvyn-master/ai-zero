@@ -45,10 +45,14 @@
       },
       "style": {
         "useNamingConvention": "off",
-        "noNonNullAssertion": "error"
+        "noNonNullAssertion": "error",
+        "noDescendingSpecificity": "off"
       },
       "complexity": {
         "noForEach": "off"
+      },
+      "performance": {
+        "noImgElement": "off"
       }
     }
   }

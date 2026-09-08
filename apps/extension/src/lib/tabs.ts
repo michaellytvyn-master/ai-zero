@@ -21,7 +21,9 @@ export const EMPTY_TAB_CHAT: TabChat = {
   conversationId: null,
   draft: '',
   model: 'auto',
-  pageMode: 'off',
+  // On by default: the panel is opened from a page, so the page is usually
+  // what the question is about. Falls back to off if access was never granted.
+  pageMode: 'text',
   responseMode: DEFAULT_RESPONSE_MODE,
   pendingAnswer: null,
   pendingAnsweredBy: null,

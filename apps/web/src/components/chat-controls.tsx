@@ -20,10 +20,22 @@ export default function ChatControls(props: {
   model: string
   onModel: (id: string) => void
   usingOwnKeys: boolean
+  makeImage: boolean
+  onMakeImage: (on: boolean) => void
 }) {
   return (
     <>
       <div className="row" style={{ flexWrap: 'wrap' }}>
+        <label className="row" style={{ fontSize: 13, gap: 6 }}>
+          <input
+            type="checkbox"
+            checked={props.makeImage}
+            onChange={(event) => props.onMakeImage(event.target.checked)}
+            style={{ width: 'auto' }}
+          />
+          <span className="muted">Make an image</span>
+        </label>
+
         <label className="row" style={{ fontSize: 13, gap: 8 }}>
           <span className="muted">Answer</span>
           <select
@@ -42,6 +54,13 @@ export default function ChatControls(props: {
           caps the reply at {responseMode(props.mode).maxTokens} tokens
         </span>
       </div>
+
+      {props.makeImage && (
+        <p className="muted small" style={{ margin: 0 }}>
+          Images are generated on Cloudflare and stored for one hour, then deleted automatically.
+          Download anything you want to keep.
+        </p>
+      )}
 
       <ModelPicker
         models={props.models}

@@ -1,8 +1,9 @@
 'use client'
 
 import { MAX_RECORDING_SECONDS } from '@zca/providers'
-import { MicrophoneError, type ActiveRecording, startRecording } from '@zca/shared'
+import { MIC, MIC_OFF, MicrophoneError, type ActiveRecording, startRecording } from '@zca/shared'
 import { useRef, useState } from 'react'
+import Icon from './icon'
 
 type State = 'idle' | 'recording' | 'transcribing'
 
@@ -63,9 +64,11 @@ export default function MicButton({
       onClick={() => void (state === 'recording' ? finish() : begin())}
       disabled={state === 'transcribing'}
       title={`Voice input, up to ${MAX_RECORDING_SECONDS} seconds`}
+      className="row"
       style={state === 'recording' ? { borderColor: 'var(--danger)', color: 'var(--danger)' } : {}}
     >
-      {state === 'recording' ? '■ Stop' : state === 'transcribing' ? '…' : '🎙 Speak'}
+      <Icon shape={state === 'recording' ? MIC_OFF : MIC} />
+      {state === 'recording' ? 'Stop' : state === 'transcribing' ? '…' : 'Speak'}
     </button>
   )
 }

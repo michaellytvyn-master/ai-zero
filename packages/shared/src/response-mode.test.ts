@@ -32,6 +32,7 @@ describe('the modes themselves', () => {
   })
 
   it('falls back to the default rather than throwing on junk', () => {
+    expect(DEFAULT_RESPONSE_MODE).toBe('eco')
     expect(responseMode('nonsense').id).toBe(DEFAULT_RESPONSE_MODE)
     expect(responseMode(null).id).toBe(DEFAULT_RESPONSE_MODE)
     expect(responseMode(undefined).id).toBe(DEFAULT_RESPONSE_MODE)

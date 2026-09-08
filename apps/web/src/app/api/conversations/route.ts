@@ -12,13 +12,20 @@ export async function GET(request: Request): Promise<Response> {
   const user = await resolveUser(request)
   if (user === null) return unauthenticatedResponse()
 
-  const conversations = await listConversations(user.id)
+  const raw = new URL(request.url).searchParams.get('before')
+  const before = raw === null ? undefined : new Date(raw)
+  if (before !== undefined && Number.isNaN(before.getTime())) {
+    return Response.json({ error: { type: 'invalid_request' } }, { status: 400 })
+  }
+
+  const page = await listConversations(user.id, before)
   return Response.json(
     {
-      conversations: conversations.map((item) => ({
+      conversations: page.items.map((item) => ({
         ...item,
         updatedAt: item.updatedAt.toISOString(),
       })),
+      nextCursor: page.nextCursor,
     },
     { headers: { 'cache-control': 'no-store' } },
   )

@@ -1,7 +1,8 @@
-import { type ResponseMode, responseMode, responseModes } from '@zca/shared'
+import { type ResponseMode, SEND, responseMode, responseModes } from '@zca/shared'
 import type { ModelOption } from '@/lib/models'
 import type { PageMode } from '@/lib/page-context'
 import type { Session } from '@/lib/session'
+import Icon from './Icon'
 import MicButton from './MicButton'
 
 export default function Composer(props: {
@@ -48,7 +49,7 @@ export default function Composer(props: {
           onClick={props.onSend}
           title="Send"
         >
-          ↑
+          <Icon shape={SEND} />
         </button>
       </div>
 

@@ -4,6 +4,7 @@ export * from './registry'
 export * from './openai-compatible'
 export { sseData } from './sse'
 export * from './transcription'
+export * from './images'
 export {
   groq,
   createGroq,

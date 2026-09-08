@@ -107,7 +107,7 @@ describeDb('conversations', () => {
 
     expect(await loadConversation(owner, conversationId)).not.toBeNull()
     expect(await loadConversation(stranger, conversationId)).toBeNull()
-    expect(await listConversations(stranger)).toHaveLength(0)
+    expect((await listConversations(stranger)).items).toHaveLength(0)
   })
 
   it('round trips a conversation and titles it from the first message', async () => {

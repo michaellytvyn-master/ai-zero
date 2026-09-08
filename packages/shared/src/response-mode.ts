@@ -16,7 +16,8 @@ export interface ResponseModeSpec {
   readonly systemPrompt: string
 }
 
-export const DEFAULT_RESPONSE_MODE: ResponseMode = 'thinking'
+/** Cheapest by default: free tiers are metered, and most questions are short. */
+export const DEFAULT_RESPONSE_MODE: ResponseMode = 'eco'
 
 export const responseModes: readonly ResponseModeSpec[] = [
   {

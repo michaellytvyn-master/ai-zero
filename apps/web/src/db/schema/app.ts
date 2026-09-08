@@ -137,3 +137,29 @@ export const extensionSessions = pgTable(
   },
   (table) => [index('extension_session_user').on(table.userId)],
 )
+
+/**
+ * Generated images live for an hour and then go, so a free Cloudinary account
+ * is not filled up by pictures nobody came back for. Only where the file is
+ * and when it dies — the prompt is already in the conversation.
+ */
+export const generatedImages = pgTable(
+  'generated_image',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    conversationId: uuid('conversation_id').references(() => conversations.id, {
+      onDelete: 'set null',
+    }),
+    publicId: text('public_id').notNull(),
+    url: text('url').notNull(),
+    model: text('model').notNull(),
+    bytes: integer('bytes').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  },
+  (table) => [index('generated_image_expiry').on(table.expiresAt)],
+)

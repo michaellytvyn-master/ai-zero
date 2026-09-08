@@ -1,8 +1,10 @@
 import { MAX_RECORDING_SECONDS } from '@zca/providers'
+import { MIC, MIC_OFF } from '@zca/shared'
 import { type ActiveRecording, MicrophoneError, startRecording } from '@zca/shared'
 import { useRef, useState } from 'react'
 import type { Session } from '@/lib/session'
 import { transcribe } from '@/lib/transcribe'
+import Icon from './Icon'
 
 type State = 'idle' | 'recording' | 'transcribing'
 
@@ -69,7 +71,11 @@ export default function MicButton(props: {
       className={state === 'recording' ? 'icon recording' : 'icon'}
       title={`Voice input, up to ${MAX_RECORDING_SECONDS} seconds`}
     >
-      {state === 'recording' ? '■' : state === 'transcribing' ? '…' : '🎙'}
+      {state === 'transcribing' ? (
+        <span className="spin">…</span>
+      ) : (
+        <Icon shape={state === 'recording' ? MIC_OFF : MIC} />
+      )}
     </button>
   )
 }

@@ -4,9 +4,11 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import type { ModelChoice } from '@zca/providers'
-import { DEFAULT_RESPONSE_MODE, type ResponseMode, isResponseMode, readSse } from '@zca/shared'
+import { DEFAULT_RESPONSE_MODE, type ResponseMode, isResponseMode } from '@zca/shared'
 import ConversationList from './conversation-list'
 import MessageLog from './message-log'
+import { streamChatTurn } from '@/lib/chat-stream'
+import { generateImage } from '@/lib/generate-image'
 import ChatControls from './chat-controls'
 import MicButton from './mic-button'
 import { type Turn, appendToLast, replaceLast } from './turn'
@@ -19,7 +21,8 @@ interface SignupOption {
 }
 
 export default function ChatClient(props: {
-  conversations: { id: string; title: string }[]
+  conversations: { id: string; title: string; updatedAt: string }[]
+  nextCursor: string | null
   activeId: string | null
   initialMessages: Omit<Turn, 'id'>[]
   usingOwnKeys: boolean
@@ -37,6 +40,7 @@ export default function ChatClient(props: {
   const [provider, setProvider] = useState<string | null>(null)
   const [needsKey, setNeedsKey] = useState<SignupOption[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [makeImage, setMakeImage] = useState(false)
   const [remaining, setRemaining] = useState(props.demoRemaining)
   const [model, setModel] = useState(props.initialModel)
   // Remembered per browser: how you like answers is a preference, not a
@@ -76,63 +80,68 @@ export default function ChatClient(props: {
       { id: crypto.randomUUID(), role: 'assistant', content: '' },
     ])
 
-    const response = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        content,
-        model,
-        mode,
-        ...(conversationId.current !== null && { conversationId: conversationId.current }),
-      }),
-    })
-
-    if (!response.ok || response.body === null) {
-      const body = (await response.json().catch(() => null)) as {
-        error?: { type?: string; message?: string; addYourOwnKey?: SignupOption[] }
-      } | null
-      if (body?.error?.type === 'demo_exhausted') {
-        setNeedsKey(body.error.addYourOwnKey ?? [])
-        setRemaining(0)
-        setTurns((previous) => previous.slice(0, -2))
-      } else {
+    if (makeImage) {
+      const outcome = await generateImage(content, conversationId.current)
+      if (outcome.ok) {
         setTurns((previous) =>
-          replaceLast(previous, body?.error?.message ?? 'Something went wrong.'),
+          replaceLast(previous, '').map((turn, index, all) =>
+            index === all.length - 1 ? { ...turn, image: outcome.image } : turn,
+          ),
         )
+      } else {
+        if (outcome.exhausted) setNeedsKey([])
+        setError(outcome.message)
+        setTurns((previous) => previous.slice(0, -2))
       }
       setBusy(false)
+      router.refresh()
       return
     }
 
-    for await (const event of readSse(response.body)) {
-      if (event.name === 'meta') {
-        conversationId.current = String(event.data.conversationId)
-        setProvider(String(event.data.provider))
-        // The reply is tagged with whoever actually answered, which may differ
-        // from the pick when the chosen provider was rate limited.
-        const answered = { provider: String(event.data.provider), model: String(event.data.model) }
-        setTurns((previous) => {
-          const last = previous[previous.length - 1]
-          if (last === undefined) return previous
-          return [...previous.slice(0, -1), { ...last, ...answered }]
-        })
-      } else if (event.name === 'delta') {
-        const chunk = String(event.data.content)
-        setTurns((previous) => appendToLast(previous, chunk))
-      }
-    }
+    let spent = false
+    await streamChatTurn(
+      { content, model, mode, conversationId: conversationId.current },
+      {
+        onMeta: (meta) => {
+          conversationId.current = meta.conversationId
+          setProvider(meta.provider)
+          // Tagged with whoever actually answered, which differs from the pick
+          // when that provider was rate limited and failover stepped in.
+          setTurns((previous) => {
+            const last = previous[previous.length - 1]
+            if (last === undefined) return previous
+            return [
+              ...previous.slice(0, -1),
+              { ...last, provider: meta.provider, model: meta.model },
+            ]
+          })
+          spent = true
+        },
+        onDelta: (chunk) => setTurns((previous) => appendToLast(previous, chunk)),
+        onExhausted: (options) => {
+          setNeedsKey(options)
+          setRemaining(0)
+          setTurns((previous) => previous.slice(0, -2))
+        },
+        onFailed: (message) => setTurns((previous) => replaceLast(previous, message)),
+      },
+    )
 
-    if (remaining !== null)
+    if (spent && remaining !== null) {
       setRemaining((value) => (value === null ? null : Math.max(0, value - 1)))
+    }
     setBusy(false)
     router.refresh()
   }
-
   return (
     <main
       style={{ display: 'grid', gridTemplateColumns: '220px 1fr', minHeight: 'calc(100vh - 52px)' }}
     >
-      <ConversationList conversations={props.conversations} activeId={props.activeId} />
+      <ConversationList
+        conversations={props.conversations}
+        nextCursor={props.nextCursor}
+        activeId={props.activeId}
+      />
 
       <section style={{ display: 'flex', flexDirection: 'column', padding: 20, gap: 14 }}>
         <div className="row muted" style={{ fontSize: 13 }}>
@@ -158,9 +167,11 @@ export default function ChatClient(props: {
           model={model}
           onModel={setModel}
           usingOwnKeys={props.usingOwnKeys}
+          makeImage={makeImage}
+          onMakeImage={setMakeImage}
         />
 
-        <div className="row">
+        <div className="composer-box">
           <textarea
             rows={2}
             value={draft}

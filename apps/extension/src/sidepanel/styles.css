@@ -325,3 +325,17 @@ a {
 a:hover {
   text-decoration: underline;
 }
+
+.spin {
+  display: inline-block;
+  animation: pulse 900ms ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}

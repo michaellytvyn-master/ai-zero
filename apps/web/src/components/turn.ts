@@ -4,6 +4,8 @@ export interface Turn {
   content: string
   provider?: string | null
   model?: string | null
+  /** Set instead of content when this turn is a generated picture. */
+  image?: { url: string; expiresAt: string; model: string } | null
 }
 
 export function appendToLast(turns: Turn[], chunk: string): Turn[] {

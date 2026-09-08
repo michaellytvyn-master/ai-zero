@@ -33,10 +33,12 @@ export default async function ChatPage({
 
   return (
     <ChatClient
-      conversations={conversations.map((item) => ({
+      conversations={conversations.items.map((item) => ({
         id: item.id,
         title: item.title,
+        updatedAt: item.updatedAt.toISOString(),
       }))}
+      nextCursor={conversations.nextCursor}
       activeId={active?.summary.id ?? null}
       models={[...listModels()]}
       initialModel={

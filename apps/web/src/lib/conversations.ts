@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from 'drizzle-orm'
+import { and, asc, desc, eq, lt } from 'drizzle-orm'
 import type { ChatMessage } from '@zca/shared'
 import { db } from '../db'
 import { conversations, messages } from '../db/schema'
@@ -18,17 +18,40 @@ export interface StoredMessage {
   readonly createdAt: Date
 }
 
-export async function listConversations(userId: string): Promise<ConversationSummary[]> {
-  return db()
+export const CONVERSATION_PAGE = 30
+
+export interface ConversationPage {
+  readonly items: ConversationSummary[]
+  /** Pass back as `before` for the next page; null when the list is exhausted. */
+  readonly nextCursor: string | null
+}
+
+/**
+ * Keyset pagination on updatedAt rather than an offset: the list reorders as
+ * conversations are used, and an offset would skip or repeat rows when it does.
+ */
+export async function listConversations(userId: string, before?: Date): Promise<ConversationPage> {
+  const rows = await db()
     .select({
       id: conversations.id,
       title: conversations.title,
       updatedAt: conversations.updatedAt,
     })
     .from(conversations)
-    .where(eq(conversations.userId, userId))
+    .where(
+      before === undefined
+        ? eq(conversations.userId, userId)
+        : and(eq(conversations.userId, userId), lt(conversations.updatedAt, before)),
+    )
     .orderBy(desc(conversations.updatedAt))
-    .limit(100)
+    .limit(CONVERSATION_PAGE + 1)
+
+  const items = rows.slice(0, CONVERSATION_PAGE)
+  const more = rows.length > CONVERSATION_PAGE
+  return {
+    items,
+    nextCursor: more ? (items[items.length - 1]?.updatedAt.toISOString() ?? null) : null,
+  }
 }
 
 /** Returns null when the conversation belongs to somebody else. */

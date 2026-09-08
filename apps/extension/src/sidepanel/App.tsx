@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { usesOwnKeys } from '@/lib/chat'
 import { pickableModels } from '@/lib/models'
 import type { PageMode } from '@/lib/page-context'
-import { isReadable, requestPageAccess } from '@/lib/permissions'
+import { hasPageAccess, isReadable, requestPageAccess } from '@/lib/permissions'
 import { loadSavings } from '@/lib/savings'
 import { type Session, loadSession, signOut } from '@/lib/session'
 import { takePendingQuote } from '@/lib/tabs'
@@ -46,6 +46,15 @@ export default function App() {
       if (quote !== null) patchChat({ draft: `"""\n${quote}\n"""\n\n` })
     })
   }, [patchChat, tabId])
+
+  // Page reading is on by default, but only makes sense once access exists.
+  // Quietly falling back beats defaulting to a setting that errors on first use.
+  useEffect(() => {
+    if (chat.pageMode === 'off') return
+    void hasPageAccess().then((granted) => {
+      if (!granted) patchChat({ pageMode: 'off' })
+    })
+  }, [chat.pageMode, patchChat])
 
   useEffect(() => {
     const panel = log.current

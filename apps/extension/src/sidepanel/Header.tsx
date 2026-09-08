@@ -1,6 +1,8 @@
 import { formatUsd, type Savings } from '@zca/pricing'
+import { CLOSE, PLUS } from '@zca/shared'
 import { SITE_URL } from '@/lib/config'
 import type { Session } from '@/lib/session'
+import Icon from './Icon'
 
 export default function Header(props: {
   session: Session
@@ -29,10 +31,10 @@ export default function Header(props: {
 
         <span className="spacer" />
         <button type="button" className="icon" onClick={props.onNewChat} title="New chat">
-          ✎
+          <Icon shape={PLUS} />
         </button>
         <button type="button" className="icon" onClick={props.onClose} title="Close on this tab">
-          ✕
+          <Icon shape={CLOSE} />
         </button>
       </header>
 
