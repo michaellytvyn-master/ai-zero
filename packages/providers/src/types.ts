@@ -18,6 +18,8 @@ export interface Provider {
   readonly models: readonly ModelSpec[]
   readonly signupUrl: string
   readonly keyEnvVar: string
+  /** Where requests actually go; the extension calls this directly in BYOK mode. */
+  readonly baseUrl: string
   /** Checked against the provider's terms; see docs/providers.md. */
   readonly termsAllowServingEndUsers: boolean
 

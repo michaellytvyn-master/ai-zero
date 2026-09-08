@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useRef, useState } from 'react'
-import { readSse } from '@/lib/sse-client'
+import { readSse } from '@zca/shared'
 
 interface Turn {
   role: 'system' | 'user' | 'assistant'

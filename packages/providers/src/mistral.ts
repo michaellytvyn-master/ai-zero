@@ -10,6 +10,7 @@ export function createMistral(baseUrl: string = MISTRAL_BASE_URL): Provider {
     label: 'Mistral',
     priority: 10,
     signupUrl: 'https://console.mistral.ai/api-keys',
+    baseUrl,
     keyEnvVar: 'MISTRAL_API_KEY',
     // Commercial ToS allows a "Customer Offering" serving End Users, and forbids
     // buying/selling/transferring keys. The free Experiment tier also requires

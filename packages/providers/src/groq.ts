@@ -10,6 +10,7 @@ export function createGroq(baseUrl: string = GROQ_BASE_URL): Provider {
     label: 'Groq',
     priority: 20,
     signupUrl: 'https://console.groq.com/keys',
+    baseUrl,
     keyEnvVar: 'GROQ_API_KEY',
     // Services Agreement 3.1 permits serving End Users through your own
     // application; 3.2 and 6.3(c) forbid reselling or transferring the key.

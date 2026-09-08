@@ -4,9 +4,9 @@ export interface SseEvent {
 }
 
 /**
- * Browser-side counterpart to the parser in @zca/providers. Kept separate
- * because that one yields raw payload strings for OpenAI-shaped streams, while
- * the app's own endpoint uses named events.
+ * Reads SSE frames that carry an event name. The parser in @zca/providers
+ * yields raw payloads for OpenAI-shaped provider streams; this one is for our
+ * own endpoints, where the name distinguishes meta from delta from usage.
  */
 export async function* readSse(body: ReadableStream<Uint8Array>): AsyncGenerator<SseEvent> {
   const reader = body.getReader()

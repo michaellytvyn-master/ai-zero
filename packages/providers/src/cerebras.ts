@@ -17,6 +17,7 @@ export function createCerebras(baseUrl: string = CEREBRAS_BASE_URL): Provider {
     label: 'Cerebras',
     priority: 30,
     signupUrl: 'https://cloud.cerebras.ai/',
+    baseUrl,
     keyEnvVar: 'CEREBRAS_API_KEY',
     termsAllowServingEndUsers: true,
     models: [

@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Zero-Cost AI",
+  "version": "0.1.0",
+  "description": "Chat on free LLM provider tiers, with automatic failover when one is rate limited.",
+  "minimum_chrome_version": "116",
+  "permissions": ["sidePanel", "storage", "identity", "contextMenus", "activeTab", "scripting"],
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "https://api.groq.com/*",
+    "https://api.mistral.ai/*",
+    "https://api.cerebras.ai/*"
+  ],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "side_panel": { "default_path": "sidepanel.html" },
+  "action": { "default_title": "Open Zero-Cost AI" },
+  "commands": {
+    "open-panel": {
+      "suggested_key": { "default": "Ctrl+Shift+Y", "mac": "Command+Shift+Y" },
+      "description": "Open the Zero-Cost AI side panel"
+    }
+  },
+  "icons": { "16": "icons/16.png", "48": "icons/48.png", "128": "icons/128.png" }
+}

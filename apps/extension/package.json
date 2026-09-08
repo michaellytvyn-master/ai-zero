@@ -1,0 +1,26 @@
+{
+  "name": "@zca/extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite build --watch --mode development",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@zca/providers": "workspace:*",
+    "@zca/shared": "workspace:*",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "@zca/router-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.287",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.2",
+    "vite": "^5.4.21"
+  }
+}

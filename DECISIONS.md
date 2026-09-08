@@ -142,3 +142,33 @@ Excluded from the operator pool, available as BYOK:
 - **OpenRouter** — 50 requests/day without buying credits; terms unverified.
 - **Cerebras** — no longer free (see docs/providers.md).
 - **NVIDIA NIM** — finite signup credits, so a trial rather than a free tier.
+
+## 13. The extension holds plaintext keys, because direct mode requires it
+
+Decision 10 moved keys into Postgres so they follow the user between devices.
+Decision 6 chose a grace period in which the extension keeps working on the
+user's own key while our server is unreachable. Those two together force a
+third thing: `GET /api/extension/me` returns the caller's own provider keys in
+plaintext, over TLS, to a valid bearer token, and the extension caches them in
+`chrome.storage.local`.
+
+There is no way to have both "keys sync from my account" and "BYOK survives
+your downtime" without the key reaching the client. What is bounded instead:
+
+- a token unlocks only the keys of the user it belongs to
+- only the hash of a token is stored, so the table cannot hand out working ones
+- tokens are revocable and expire, and the extension can revoke its own
+- the endpoint sets `cache-control: no-store` and logs nothing
+
+If direct mode is ever dropped, this endpoint should stop returning `key` and
+the extension should route everything through `/api/v1/chat/completions`, which
+already accepts the same bearer token.
+
+## 14. Extension sign-in is a redirect-bounded web flow
+
+`chrome.identity.launchWebAuthFlow` finishes when the browser reaches a URL
+under the extension's own `chromiumapp.org` origin. `/extension/authorize`
+therefore refuses any `redirect_uri` that does not match
+`https://<32 letters a-p>.chromiumapp.org/`, because a laxer check would make
+the page an open redirect that leaks a bearer token. A `state` value is echoed
+back and compared in the extension.

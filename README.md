@@ -12,33 +12,36 @@ The brief is [SPEC.md](SPEC.md). Where the build departs from it, and why, is
 
 ## Status
 
-Router core and the web app are done. The extension is next.
+Router, web app and the extension are working. The savings counter is next.
 
 | | | |
 |---|---|---|
 | Router core: providers, failover, streaming | done | 29 tests |
-| Web app: Google auth, Postgres, encrypted key vault, chat with history, admin dashboard | done | 22 tests, 9 against a real database |
-| Chrome extension: sign-in through the site, side panel, BYOK direct mode | not started | |
+| Web app: Google auth, Postgres, encrypted key vault, chat with history, admin dashboard | done | 22 tests |
+| Extension: sign-in through the site, side panel, BYOK direct mode, page context, context menu | done | 9 tests |
 | Savings counter | not started | |
-| Page context and context menu | not started | |
 | Ship: store listing, CI, licence | not started | |
+
+60 tests in total; 18 of them run against a real Postgres.
 
 ## Layout
 
 ```
 packages/
-  shared/       types and zod schemas crossing every boundary
+  shared/       types, zod schemas and the named-event SSE reader
   providers/    one file per provider + the shared OpenAI-compatible helper
   router-core/  failover state machine and a runtime-agnostic HTTP handler
 apps/
   web/          Next.js: auth, key vault, chat, admin, and the router mounted
                 as route handlers
+  extension/    Manifest V3 side panel, Vite + React
 scripts/        Phase 1 harness: a node:http server and provider stubs
 docs/           provider verification log
 ```
 
-`packages/router-core` imports nothing from Node or Next.js, so the failover
-stays testable on its own and could move to another runtime later.
+`packages/router-core` imports nothing from Node or Next.js, which is why the
+extension can run the very same failover engine in the browser when it calls
+providers directly.
 
 ## Running it
 
@@ -77,6 +80,30 @@ providers so no free-tier quota is spent. Modes are `stream`, `429`, `401`,
 ```bash
 ./scripts/demo-phase1.sh "9001:429:mistral,9002:stream:groq" curl -sS -N -X POST http://localhost:8787/v1/chat/completions -H 'content-type: application/json' -d '{"model":"auto","stream":true,"messages":[{"role":"user","content":"hi"}]}'
 ```
+
+## The extension
+
+```bash
+pnpm --filter @zca/extension build
+```
+
+Then load `apps/extension/dist` at `chrome://extensions` with developer mode on
+and "Load unpacked". Open the side panel from the toolbar icon or with
+Ctrl/Cmd+Shift+Y, and sign in — it opens this site's authorize page, so the web
+app must be running first.
+
+Two modes, chosen automatically:
+
+- **You have added a key** — the extension calls the provider straight from
+  your browser. DevTools shows requests to `api.groq.com`, not to this site,
+  and it keeps working for seven days if our server goes down.
+- **You have not** — it routes through the site and spends from the shared
+  demo pool, capped per account per day.
+
+Point it at a deployed site with `VITE_SITE_URL`, and add that origin to
+`host_permissions` in `public/manifest.json`.
+
+The icons in `public/icons` are flat placeholder squares. Phase 7 replaces them.
 
 ## Providers
 
