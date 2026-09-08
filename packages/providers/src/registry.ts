@@ -1,5 +1,6 @@
 import { cloudflare } from './cloudflare'
-import { groq } from './groq'
+import { groq, groqTranscriber } from './groq'
+import type { Transcriber } from './transcription'
 import type { Provider } from './types'
 
 export const providers: readonly Provider[] = [groq, cloudflare]
@@ -74,4 +75,15 @@ export function smallestFreeModelId(): string {
   const smallest = choices[0]
   if (smallest === undefined) throw new Error('no free models are registered')
   return smallest.id
+}
+
+/** Only Groq offers speech-to-text on a free tier today. */
+export const transcribers: readonly Transcriber[] = [groqTranscriber]
+
+export function transcriberFor(providerId: string): Transcriber | undefined {
+  return transcribers.find((item) => item.providerId === providerId)
+}
+
+export function defaultTranscriber(): Transcriber | undefined {
+  return transcribers[0]
 }

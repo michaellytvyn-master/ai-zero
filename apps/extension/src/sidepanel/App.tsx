@@ -217,6 +217,8 @@ export default function App() {
         onResponseMode={(responseMode) => patchChat({ responseMode })}
         showModelPicker={ownKeys}
         attached={attached}
+        session={session}
+        onError={setError}
       />
     </>
   )

@@ -1,5 +1,7 @@
 import {
   CLOUDFLARE_API_ROOT,
+  type Transcriber,
+  createGroqTranscriber,
   smallestFreeModelId,
   GROQ_BASE_URL,
   createCloudflare,
@@ -12,6 +14,15 @@ import { operatorKeys, runtimeConfig } from '../config'
 import { PostgresCooldownStore } from './cooldowns'
 import { decryptedKeys } from './provider-keys'
 import { recordUsage } from './usage'
+
+/**
+ * Built here rather than taken from the registry const, so it honours the same
+ * base-URL override the chat providers do. Taking the const meant transcription
+ * silently ignored it.
+ */
+export function transcriber(): Transcriber {
+  return createGroqTranscriber(process.env.GROQ_BASE_URL ?? GROQ_BASE_URL)
+}
 
 export function allProviders(): readonly Provider[] {
   return [

@@ -419,3 +419,33 @@ override how to answer. A caller that set `maxTokens` deliberately keeps it.
 The site remembers the choice in `localStorage` — a preference about how you
 like answers, not a property of any one conversation. The extension keeps it per
 tab, alongside that tab's model and page setting.
+
+## 25. Voice input through Whisper on the same free tier
+
+Groq serves `whisper-large-v3-turbo` on the same no-card tier as its chat
+models: 20 requests/minute, 2 000/day, 28 800 audio-seconds/day, 25 MB a file.
+Verified 2026-09-09 against the speech-to-text docs. So dictation costs nothing
+and needs no new provider.
+
+- Recording uses `MediaRecorder`, which produces WebM/Opus — one of the formats
+  the API accepts, so nothing has to be transcoded.
+- Recording stops itself after two minutes. A forgotten recording would eat the
+  daily audio-seconds allowance, and the daily cap is per account.
+- Audio is never written to disk or to the database. On the site it is streamed
+  through `/api/transcribe` to the provider; in the extension with the user's
+  own key it never touches the server at all. Only the text comes back, and it
+  lands in the composer for the user to edit before anything is sent.
+- Transcription on the shared pool claims a demo message, because it spends the
+  operator's audio quota exactly the way a chat message spends tokens.
+- Chrome will not show the microphone prompt inside a side panel, so the
+  extension opens `mic.html`, a page whose only job is to ask for access and
+  release the device again.
+
+Transcription lives in its own small registry rather than as optional members
+on `Provider`. Only one provider offers it, and widening the interface for
+everyone to carry two members nobody else implements would have been worse.
+
+**One bug this shook out.** The transcriber was taken from the module-level
+const, which is built with the default base URL, so it ignored the
+`GROQ_BASE_URL` override that the chat path honours. It is now constructed in
+`router-deps` alongside the chat providers, from the same environment.

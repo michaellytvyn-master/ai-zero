@@ -1,5 +1,7 @@
 import { type ResponseMode, responseMode, responseModes } from '@zca/shared'
 import type { ModelOption } from '@/lib/models'
+import type { Session } from '@/lib/session'
+import MicButton from './MicButton'
 import type { PageMode } from '@/lib/page-context'
 
 export default function Composer(props: {
@@ -16,6 +18,8 @@ export default function Composer(props: {
   responseMode: ResponseMode
   onResponseMode: (mode: ResponseMode) => void
   attached: string | null
+  session: Session
+  onError: (message: string | null) => void
 }) {
   const spec = responseMode(props.responseMode)
   return (
@@ -77,6 +81,11 @@ export default function Composer(props: {
       />
 
       <div className="row">
+        <MicButton
+          session={props.session}
+          onText={(text) => props.onDraft(props.draft ? `${props.draft} ${text}` : text)}
+          onError={props.onError}
+        />
         {props.attached !== null && <span className="muted attached">sent: {props.attached}</span>}
         <span className="spacer" style={{ marginLeft: 'auto' }} />
         <button type="button" className="primary" disabled={props.busy} onClick={props.onSend}>

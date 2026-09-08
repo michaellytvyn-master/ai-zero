@@ -41,5 +41,11 @@
     "48": "icons/48.png",
     "128": "icons/128.png"
   },
-  "optional_host_permissions": ["http://*/*", "https://*/*"]
+  "optional_host_permissions": ["http://*/*", "https://*/*"],
+  "web_accessible_resources": [
+    {
+      "resources": ["mic.html"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

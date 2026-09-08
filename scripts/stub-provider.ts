@@ -31,6 +31,13 @@ for (const stub of stubs) {
       })
     }
 
+    // Whisper is a plain JSON endpoint, not a stream, so it answers separately.
+    if ((req.url ?? '').includes('/audio/transcriptions')) {
+      res.writeHead(200, { 'content-type': 'application/json' })
+      res.end(JSON.stringify({ text: `transcribed by ${stub.name}` }))
+      return
+    }
+
     const status = failures[stub.mode]
     if (status !== undefined) {
       const headers: Record<string, string> = { 'content-type': 'application/json' }

@@ -27,7 +27,9 @@ Zero-Cost AI
 >
 > Ask a question in the side panel and the request goes to whichever provider
 > is available. If one is rate limited or down, the next one answers, and the
-> panel tells you which provider it was. It can read the page you are on, as
+> panel tells you which provider it was. You can dictate instead of typing —
+> speech is transcribed by Whisper on the same free tier. It can read the page
+> you are on, as
 > readable text or as HTML source, so you can ask about what is in front of
 > you, and selecting text anywhere lets you quote just that.
 >
@@ -60,6 +62,7 @@ Reviewers read these. Each one names the feature that stops working without it.
 | `storage` | Caches the signed-in session, the user's own provider keys, and the last savings figure in `chrome.storage.local`, so the panel works across browser restarts and while the server is unreachable. Never `chrome.storage.sync`. |
 | `identity` | Sign-in uses `chrome.identity.launchWebAuthFlow` against the extension's own website. It is the only way the user authenticates; no password is ever typed into the extension. |
 | `contextMenus` | Adds the single "Ask AI about ..." item shown when text is selected, which is how a user quotes a passage into the chat. |
+| `web_accessible_resources` (`mic.html`) | Chrome will not show the microphone prompt inside a side panel, so voice input opens this one-purpose page to ask for it once. It requests access, releases the device immediately, and does nothing else. |
 | `tabs` | The panel binds each chat to the tab it was started on and shows which tab that is, which needs the tab's title and URL. |
 | `scripting` | Runs the one function that collects page content. It is invoked only when the user has switched page reading on, only against the active tab, and only for a site they have granted. |
 
@@ -91,6 +94,9 @@ Answer the dashboard's data-use form as follows, because all of it is true:
   chooses to add, encrypted at rest.
 - **User activity** — collected. Which provider answered, the model, token
   counts, latency, HTTP status and a timestamp, per request.
+- **Audio** — collected only while the user is holding a voice recording. It is
+  sent to the transcription provider and never stored by this extension or its
+  server; only the resulting text is kept, and only if the user sends it.
 - **Website content** — collected only at the user's request. Page text is sent
   to a model provider when the user presses "Add page" or quotes a selection,
   and the resulting conversation is saved to their account.

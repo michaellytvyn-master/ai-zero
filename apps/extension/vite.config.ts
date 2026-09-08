@@ -22,6 +22,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         sidepanel: here('./sidepanel.html'),
+        mic: here('./mic.html'),
         background: here('./src/background.ts'),
       },
       output: {

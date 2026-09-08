@@ -160,6 +160,21 @@ Groq's terms explicitly permit serving end users through your own application
 and forbid transferring keys to them; Cloudflare's do not restrict it. Demo
 mode is the former; it is never the latter.
 
+## Voice input
+
+A microphone button next to the composer on both surfaces. Recording is capped
+at two minutes, transcribed by Whisper on Groq's free tier — 2 000 requests and
+28 800 audio-seconds a day, the same tier as the chat models — and dropped into
+the box as text for you to edit before sending.
+
+Audio is never written to disk or to the database. With your own key it goes
+straight from the browser to the provider; without one it passes through the
+site and spends a message from the daily allowance, because it is spending the
+operator's audio quota.
+
+Chrome refuses to show the microphone prompt inside a side panel, so the
+extension opens a small page that can ask. It grants access once and closes.
+
 ## Response modes
 
 Under the composer, on both the site and the panel: **Eco** (400 tokens),

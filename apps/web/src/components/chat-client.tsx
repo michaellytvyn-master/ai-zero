@@ -8,6 +8,7 @@ import { DEFAULT_RESPONSE_MODE, type ResponseMode, isResponseMode, readSse } fro
 import ConversationList from './conversation-list'
 import MessageLog from './message-log'
 import ChatControls from './chat-controls'
+import MicButton from './mic-button'
 import { type Turn, appendToLast, replaceLast } from './turn'
 import KeyPrompt from './key-prompt'
 
@@ -35,6 +36,7 @@ export default function ChatClient(props: {
   const [busy, setBusy] = useState(false)
   const [provider, setProvider] = useState<string | null>(null)
   const [needsKey, setNeedsKey] = useState<SignupOption[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [remaining, setRemaining] = useState(props.demoRemaining)
   const [model, setModel] = useState(props.initialModel)
   // Remembered per browser: how you like answers is a preference, not a
@@ -67,6 +69,7 @@ export default function ChatClient(props: {
     setDraft('')
     setBusy(true)
     setNeedsKey(null)
+    setError(null)
     setTurns((previous) => [
       ...previous,
       { id: crypto.randomUUID(), role: 'user', content },
@@ -146,6 +149,7 @@ export default function ChatClient(props: {
         <MessageLog turns={turns} busy={busy} />
 
         {needsKey !== null && <KeyPrompt providers={needsKey} />}
+        {error !== null && <p className="error">{error}</p>}
 
         <ChatControls
           mode={mode}
@@ -168,6 +172,10 @@ export default function ChatClient(props: {
                 void send()
               }
             }}
+          />
+          <MicButton
+            onText={(text) => setDraft((previous) => (previous ? `${previous} ${text}` : text))}
+            onError={(message) => setError(message.length > 0 ? message : null)}
           />
           <button type="button" className="primary" disabled={busy} onClick={() => void send()}>
             Send

@@ -1,5 +1,6 @@
 import { classifyThrown } from './errors'
 import { openAICompatibleChat } from './openai-compatible'
+import { type Transcriber, openAICompatibleTranscribe } from './transcription'
 import type { Provider } from './types'
 
 export const GROQ_BASE_URL = 'https://api.groq.com/openai/v1'
@@ -37,3 +38,29 @@ export function createGroq(baseUrl: string = GROQ_BASE_URL): Provider {
 }
 
 export const groq = createGroq()
+
+/**
+ * Whisper on the same free tier as the chat models: 20 requests/minute,
+ * 2 000/day, 28 800 audio-seconds/day, 25 MB per file. Verified 2026-09-09.
+ * https://console.groq.com/docs/speech-to-text
+ */
+export function createGroqTranscriber(baseUrl: string = GROQ_BASE_URL): Transcriber {
+  return {
+    providerId: 'groq',
+    label: 'Groq Whisper',
+    keyEnvVar: 'GROQ_API_KEY',
+    signupUrl: 'https://console.groq.com/keys',
+    models: [
+      {
+        id: 'whisper-large-v3-turbo',
+        label: 'Whisper large v3 turbo',
+        contextWindow: 0,
+        free: true,
+      },
+      { id: 'whisper-large-v3', label: 'Whisper large v3', contextWindow: 0, free: true },
+    ],
+    transcribe: openAICompatibleTranscribe({ providerId: 'groq', baseUrl }),
+  }
+}
+
+export const groqTranscriber = createGroqTranscriber()
