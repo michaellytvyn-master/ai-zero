@@ -107,3 +107,8 @@ function extract(wantsHtml: boolean): { title: string; url: string; content: str
       .trim(),
   }
 }
+
+/** A closed tab's chat binding is dead weight; the conversation itself stays. */
+chrome.tabs.onRemoved.addListener((tabId) => {
+  void chrome.storage.session.remove(`tab:${tabId}`)
+})

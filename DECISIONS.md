@@ -310,3 +310,30 @@ lives under `/dashboard` with its own sidebar:
 The landing page is a real page: what it is, how it works in three steps, every
 model on offer with its context size, how the savings estimate is calculated and
 why it is deliberately conservative, and what is stored.
+
+## 21. One chat per tab, and extension chats are stored
+
+The side panel is a single document, so every tab shared one conversation and
+switching tabs carried the previous chat along with it. It also kept its
+history only in memory, so nothing it produced appeared on the site and closing
+the panel lost it.
+
+Both are fixed together, because per-tab chats are only useful if they survive:
+
+- The panel binds to the tab in front. Each tab keeps its own conversation id,
+  draft, model and page-context setting, so switching tabs switches chats and
+  coming back restores the one that was there. The header names the tab, and
+  "New chat" starts a fresh one for that tab only.
+- Bindings live in `chrome.storage.session`, not `local`. Tab ids only mean
+  anything while the browser is running; a binding that outlived a restart
+  would attach an old conversation to an unrelated new tab.
+- The background worker drops a tab's binding when the tab closes. The
+  conversation itself stays — it belongs to the account, not the tab.
+- `/api/conversations` lets the extension create, read and append. It needs
+  this because in direct mode it calls the provider itself and holds the only
+  copy of the exchange.
+
+Every one of those endpoints loads the conversation as the requesting user
+first, so another account gets 404 rather than 403 — a 403 would confirm the id
+exists. The append schema is strict, so a client cannot widen a stored message
+with fields of its own.

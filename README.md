@@ -110,6 +110,10 @@ unreadable") does not say which folder it wanted. Open the side panel from the t
 Ctrl/Cmd+Shift+Y, and sign in — it opens this site's authorize page, so the web
 app must be running first.
 
+Each tab gets its own chat. Switch tabs and the panel switches with you; come
+back and the conversation is still there. Those chats are stored on your
+account, so they also show up on the site and survive closing the panel.
+
 Two modes, chosen automatically:
 
 - **You have added a key** — the extension calls the provider straight from

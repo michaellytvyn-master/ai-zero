@@ -1,35 +1,38 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Savings } from '@zca/pricing'
 import type { ChatMessage } from '@zca/shared'
-import { streamChat, usesOwnKeys, type ChatEvent } from '@/lib/chat'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { streamChat, usesOwnKeys } from '@/lib/chat'
 import { SITE_URL } from '@/lib/config'
 import { contextCharBudget } from '@/lib/context-budget'
-import { asContextMessage, readActivePage, type PageMode } from '@/lib/page-context'
+import { appendMessage, createConversation } from '@/lib/conversations'
 import { pickableModels } from '@/lib/models'
+import { asContextMessage, readActivePage } from '@/lib/page-context'
 import { loadSavings } from '@/lib/savings'
-import { loadSession, signOut, type Session } from '@/lib/session'
+import { type Session, loadSession, signOut } from '@/lib/session'
+import { applyEvent } from './apply-event'
 import Composer from './Composer'
 import Header from './Header'
-import SignIn from './SignIn'
 import SavingsPanel from './SavingsPanel'
+import SignIn from './SignIn'
+import MessageList from './MessageList'
+import { newTurn } from './turn'
+import { useTabChat } from './use-tab-chat'
 
-type Turn = { id: string; role: 'user' | 'assistant'; content: string; answeredBy?: string }
 type Exhausted = { label: string; url: string }[]
 
 export default function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined)
-  const [turns, setTurns] = useState<Turn[]>([])
-  const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
   const [provider, setProvider] = useState<string | null>(null)
   const [exhausted, setExhausted] = useState<Exhausted | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [savings, setSavings] = useState<Savings | null>(null)
-  const [model, setModel] = useState('auto')
-  const [pageMode, setPageMode] = useState<PageMode>('off')
-  const [attached, setAttached] = useState<string | null>(null)
   const [showSavings, setShowSavings] = useState(false)
+  const [attached, setAttached] = useState<string | null>(null)
   const log = useRef<HTMLDivElement>(null)
+
+  const signedIn = session ?? null
+  const { tab, chat, turns, setTurns, patchChat, startNewChat } = useTabChat(signedIn)
 
   useEffect(() => {
     void loadSession().then(async (found) => {
@@ -44,9 +47,9 @@ export default function App() {
       const quote = stored.pendingQuote as string | undefined
       if (quote === undefined || quote.length === 0) return
       await chrome.storage.local.remove('pendingQuote')
-      setDraft(`"""\n${quote}\n"""\n\n`)
+      patchChat({ draft: `"""\n${quote}\n"""\n\n` })
     })
-  }, [])
+  }, [patchChat])
 
   useEffect(() => {
     const panel = log.current
@@ -55,10 +58,10 @@ export default function App() {
   }, [turns])
 
   const send = useCallback(async () => {
-    const content = draft.trim()
-    if (content.length === 0 || busy || session == null) return
+    const content = chat.draft.trim()
+    if (content.length === 0 || busy || signedIn === null) return
 
-    setDraft('')
+    patchChat({ draft: '' })
     setBusy(true)
     setError(null)
     setExhausted(null)
@@ -67,16 +70,12 @@ export default function App() {
       role: turn.role,
       content: turn.content,
     }))
-    setTurns((previous) => [
-      ...previous,
-      { id: crypto.randomUUID(), role: 'user', content },
-      { id: crypto.randomUUID(), role: 'assistant', content: '' },
-    ])
+    setTurns((previous) => [...previous, newTurn('user', content), newTurn('assistant', '')])
 
-    if (pageMode !== 'off') {
+    if (chat.pageMode !== 'off') {
       try {
-        const budget = contextCharBudget(pickableModels(session), model)
-        const page = await readActivePage(pageMode, budget)
+        const budget = contextCharBudget(pickableModels(signedIn), chat.model)
+        const page = await readActivePage(chat.pageMode, budget)
         history.unshift({ role: 'system', content: asContextMessage(page) })
         setAttached(
           `${page.title || page.url} · ${page.mode} · ${page.content.length.toLocaleString()} chars${
@@ -93,9 +92,35 @@ export default function App() {
       setAttached(null)
     }
 
-    const controller = new AbortController()
-    for await (const event of streamChat(session, history, model, controller.signal)) {
+    let conversationId = chat.conversationId
+    if (conversationId === null) {
+      conversationId = await createConversation(signedIn, content).catch(() => null)
+      if (conversationId !== null) patchChat({ conversationId })
+    }
+    if (conversationId !== null) {
+      await appendMessage(signedIn, conversationId, { role: 'user', content })
+    }
+
+    let answer = ''
+    let answeredBy: { providerId: string; model: string } | null = null
+    for await (const event of streamChat(
+      signedIn,
+      history,
+      chat.model,
+      new AbortController().signal,
+    )) {
+      if (event.kind === 'delta') answer += event.content
+      if (event.kind === 'provider')
+        answeredBy = { providerId: event.providerId, model: event.model }
       applyEvent(event, { setTurns, setProvider, setExhausted, setError })
+    }
+
+    if (conversationId !== null && answer.length > 0) {
+      await appendMessage(signedIn, conversationId, {
+        role: 'assistant',
+        content: answer,
+        ...(answeredBy ?? {}),
+      })
     }
 
     setBusy(false)
@@ -104,10 +129,9 @@ export default function App() {
       setSession(refreshed)
       setSavings(await loadSavings(refreshed))
     })
-  }, [busy, draft, model, pageMode, session, turns])
+  }, [busy, chat, patchChat, setTurns, signedIn, turns])
 
   if (session === undefined) return <div className="centered muted">Loading…</div>
-
   if (session === null) return <SignIn onSignedIn={setSession} />
 
   const ownKeys = usesOwnKeys(session)
@@ -119,24 +143,13 @@ export default function App() {
         ownKeys={ownKeys}
         provider={provider}
         savings={savings}
+        tabTitle={tab?.title ?? null}
+        onNewChat={startNewChat}
         onToggleSavings={() => setShowSavings((open) => !open)}
         onSignOut={() => void signOut().then(() => setSession(null))}
       />
 
-      <div className="log" ref={log}>
-        {turns.length === 0 && (
-          <p className="muted">
-            Ask anything. To ask about the page you are on, switch &ldquo;Do not read the
-            page&rdquo; below to text or HTML. Selecting text and right clicking quotes just that.
-          </p>
-        )}
-        {turns.map((turn, index) => (
-          <div key={turn.id} className={`turn ${turn.role}`}>
-            <div className="who">{turn.role}</div>
-            {turn.content || (busy && index === turns.length - 1 ? '…' : '')}
-          </div>
-        ))}
-      </div>
+      <MessageList turns={turns} busy={busy} logRef={log} />
 
       {showSavings && savings !== null && <SavingsPanel savings={savings} />}
 
@@ -162,51 +175,18 @@ export default function App() {
       {error !== null && <div className="notice bad">{error}</div>}
 
       <Composer
-        draft={draft}
-        onDraft={setDraft}
+        draft={chat.draft}
+        onDraft={(draft) => patchChat({ draft })}
         onSend={() => void send()}
         busy={busy}
-        pageMode={pageMode}
-        onPageMode={setPageMode}
+        pageMode={chat.pageMode}
+        onPageMode={(pageMode) => patchChat({ pageMode })}
         models={pickableModels(session)}
-        model={model}
-        onModel={setModel}
+        model={chat.model}
+        onModel={(model) => patchChat({ model })}
         showModelPicker={ownKeys}
         attached={attached}
       />
     </>
   )
-}
-
-function applyEvent(
-  event: ChatEvent,
-  setters: {
-    setTurns: React.Dispatch<React.SetStateAction<Turn[]>>
-    setProvider: (value: string) => void
-    setExhausted: (value: Exhausted) => void
-    setError: (value: string) => void
-  },
-): void {
-  if (event.kind === 'provider') {
-    setters.setProvider(event.providerId)
-    setters.setTurns((previous) => {
-      const last = previous[previous.length - 1]
-      if (last === undefined) return previous
-      return [
-        ...previous.slice(0, -1),
-        { ...last, answeredBy: `${event.providerId} · ${event.model}` },
-      ]
-    })
-  } else if (event.kind === 'delta') {
-    setters.setTurns((previous) => {
-      const last = previous[previous.length - 1]
-      if (last === undefined) return previous
-      return [...previous.slice(0, -1), { ...last, content: last.content + event.content }]
-    })
-  } else if (event.kind === 'exhausted') {
-    setters.setExhausted(event.signupUrls)
-    setters.setTurns((previous) => previous.slice(0, -2))
-  } else {
-    setters.setError(event.message)
-  }
 }
