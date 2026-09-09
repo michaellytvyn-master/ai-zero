@@ -33,6 +33,7 @@ export const EMPTY_TAB_CHAT: TabChat = {
 
 export interface OwnTab {
   readonly id: number
+  readonly windowId: number
   readonly title: string
   readonly url: string
 }
@@ -54,7 +55,12 @@ export function panelTabId(search: string = location.search): number | null {
 export async function ownTab(tabId: number): Promise<OwnTab | null> {
   try {
     const tab = await chrome.tabs.get(tabId)
-    return { id: tabId, title: tab.title ?? '', url: tab.url ?? '' }
+    return {
+      id: tabId,
+      windowId: tab.windowId,
+      title: tab.title ?? '',
+      url: tab.url ?? '',
+    }
   } catch {
     return null
   }

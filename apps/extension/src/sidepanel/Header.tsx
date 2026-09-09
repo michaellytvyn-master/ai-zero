@@ -14,6 +14,8 @@ export default function Header(props: {
   onToggleSavings: () => void
   onSignOut: () => void
   onClose: () => void
+  grouping: boolean
+  onGrouping: (on: boolean) => void
 }) {
   return (
     <>
@@ -43,6 +45,14 @@ export default function Header(props: {
           <span className="dot" />
           <span className="name">{props.tabTitle}</span>
           <span className="spacer" />
+          <label className="toggle" title="Collect the tabs this panel is open on into a tab group">
+            <input
+              type="checkbox"
+              checked={props.grouping}
+              onChange={(event) => props.onGrouping(event.target.checked)}
+            />
+            Group
+          </label>
           <a href={`${SITE_URL}/dashboard/keys`} target="_blank" rel="noreferrer">
             Keys
           </a>

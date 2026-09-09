@@ -7,6 +7,7 @@ import type { PageMode } from '@/lib/page-context'
 import { hasPageAccess, isReadable, requestPageAccess } from '@/lib/permissions'
 import { loadSavings } from '@/lib/savings'
 import { type Session, loadSession, signOut } from '@/lib/session'
+import { readGrouping, writeGrouping } from '@/lib/grouping'
 import { takePendingQuote } from '@/lib/tabs'
 import Composer from './Composer'
 import ExhaustedNotice from './ExhaustedNotice'
@@ -28,6 +29,7 @@ export default function App() {
   const [savings, setSavings] = useState<Savings | null>(null)
   const [showSavings, setShowSavings] = useState(false)
   const [attached, setAttached] = useState<string | null>(null)
+  const [grouping, setGrouping] = useState(true)
   const log = useRef<HTMLDivElement>(null)
 
   const signedIn = session ?? null
@@ -41,6 +43,10 @@ export default function App() {
   }, [])
 
   // The context menu stores the selection under this tab's own key.
+  useEffect(() => {
+    void readGrouping().then(setGrouping)
+  }, [])
+
   useEffect(() => {
     if (tabId === null) return
     void takePendingQuote(tabId).then((quote) => {
@@ -122,6 +128,11 @@ export default function App() {
         onNewChat={startNewChat}
         onToggleSavings={() => setShowSavings((open) => !open)}
         onSignOut={() => void signOut().then(() => setSession(null))}
+        grouping={grouping}
+        onGrouping={(on) => {
+          setGrouping(on)
+          void writeGrouping(on, tab)
+        }}
         onClose={() => {
           if (tabId !== null) void chrome.runtime.sendMessage({ type: 'close-panel', tabId })
         }}

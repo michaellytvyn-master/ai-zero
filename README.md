@@ -124,6 +124,10 @@ asks once for access to websites. The extension ships with access to none —
 there is no per-tab grant in Chrome's permission model, so the choice was
 between asking on every new domain and asking once.
 
+Tabs with the panel open are collected into a named tab group, so you can see
+at a glance which ones they are. There is a toggle in the panel header if you
+would rather it left your tab strip alone.
+
 Each tab gets its own panel, and only the tabs you opened it on have one. Click
 the toolbar icon on a tab and the panel opens there; a dot appears on the icon
 for that tab, and the panel names the tab it belongs to. Switch to a tab you

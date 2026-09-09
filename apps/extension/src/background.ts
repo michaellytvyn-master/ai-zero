@@ -1,3 +1,10 @@
+import {
+  attachTabToGroup,
+  detachTabFromGroup,
+  groupingEnabled,
+  setGroupingEnabled,
+} from './lib/tab-group'
+
 const ASK_AI = 'zca-ask-ai'
 
 /**
@@ -39,7 +46,9 @@ function openOnTab(tabId: number, windowId: number, url: string | undefined): vo
     .setOptions({ tabId, path: panelPathFor(tabId), enabled: true })
     .catch(() => undefined)
   void chrome.sidePanel.open({ tabId, windowId }).catch(() => undefined)
+  // After open, because both need the gesture and neither of these does.
   void markActive(tabId, true)
+  void attachTabToGroup(tabId, windowId)
 }
 
 /** The badge is how a tab shows it has the panel attached. */
@@ -101,6 +110,35 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   void chrome.storage.session.remove([`tab:${tabId}`, `quote:${tabId}`])
 })
 
+/** The panel reads the preference from here rather than keeping its own copy. */
+chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
+  if ((message as { type?: string } | null)?.type !== 'grouping-state') return false
+  void groupingEnabled().then((on) => sendResponse({ on }))
+  return true
+})
+
+/** Grouping is a preference the panel sets and the worker acts on. */
+chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
+  const request = message as {
+    type?: string
+    tabId?: number
+    windowId?: number
+    on?: boolean
+  } | null
+  if (request?.type !== 'set-grouping') return false
+
+  const { tabId, windowId, on } = request
+  void (async () => {
+    await setGroupingEnabled(on === true)
+    if (typeof tabId === 'number') {
+      if (on === true && typeof windowId === 'number') await attachTabToGroup(tabId, windowId)
+      else await detachTabFromGroup(tabId)
+    }
+    sendResponse({ ok: true })
+  })()
+  return true
+})
+
 /** Lets the panel turn itself off for its own tab. */
 chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
   const request = message as { type?: string; tabId?: number } | null
@@ -109,6 +147,7 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
   void (async () => {
     await chrome.sidePanel.setOptions({ tabId, enabled: false }).catch(() => undefined)
     await markActive(tabId, false)
+    await detachTabFromGroup(tabId)
     sendResponse({ ok: true })
   })()
   return true

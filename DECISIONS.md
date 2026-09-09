@@ -699,3 +699,29 @@ the store listing state that the trial is not part of any plan.
 This is positioning, not billing. SPEC.md §2 still says "No paid tier, no
 billing", and no payment code exists. The copy is simply now compatible with
 adding one without having to be rewritten to stay lawful.
+
+## 37. Attached tabs are marked with a tab group
+
+The toolbar badge only shows for whichever tab is in front, so with the panel
+open on three tabs there was no way to see which three. `chrome.tabGroups`
+gives a named, coloured group in the tab strip — visible for all of them at
+once, and it labels itself.
+
+Opening the panel on a tab adds it to a "Zero-Cost AI" group; one group per
+window, so several attached tabs sit together rather than scattered. Closing the
+panel for a tab ungroups it, and Chrome deletes a group once its last tab
+leaves.
+
+Grouping moves a tab in the strip, which is intrusive enough that doing it with
+no way to stop would be wrong. There is a toggle in the panel header, stored in
+`chrome.storage.local`, on by default.
+
+**The worker owns every tab manipulation and the panel asks by message.** Not
+for tidiness: with both importing the module, Vite split it into a chunk shared
+between a service worker and a page, and a service worker depending on a
+separately emitted chunk is a fragile thing to rely on. After the change the
+worker bundle is self-contained and `dist/chunks` holds only the panel's
+polyfill.
+
+Grouping and the badge both run after `sidePanel.open`, never before, for the
+reason in decision 30.

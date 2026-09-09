@@ -65,6 +65,7 @@ Reviewers read these. Each one names the feature that stops working without it.
 | `identity` | Sign-in uses `chrome.identity.launchWebAuthFlow` against the extension's own website. It is the only way the user authenticates; no password is ever typed into the extension. |
 | `contextMenus` | Adds the single "Ask AI about ..." item shown when text is selected, which is how a user quotes a passage into the chat. |
 | `web_accessible_resources` (`mic.html`) | Chrome will not show the microphone prompt inside a side panel, so voice input opens this one-purpose page to ask for it once. It requests access, releases the device immediately, and does nothing else. |
+| `tabGroups` | Tabs the panel is open on are collected into one named group, so a user can see which tabs it is attached to. There is a toggle to turn this off. |
 | `tabs` | The panel binds each chat to the tab it was started on and shows which tab that is, which needs the tab's title and URL. |
 | `scripting` | Runs the one function that collects page content. It is invoked only when the user has switched page reading on, only against the active tab, and only for a site they have granted. |
 
