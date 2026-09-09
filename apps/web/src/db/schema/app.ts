@@ -185,3 +185,22 @@ export const apiKeys = pgTable(
   },
   (table) => [index('api_key_user').on(table.userId)],
 )
+
+/**
+ * A per-minute ceiling on every account, own keys or not. Provider quotas are
+ * per organisation, so many polite users cost us nothing — but one runaway
+ * script would make this server's egress look like an attack to whoever is in
+ * front of the provider's API, and that is shared with every other user.
+ */
+export const requestWindows = pgTable(
+  'request_window',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** Truncated to the minute, so old rows are trivially identifiable. */
+    minute: timestamp('minute', { withTimezone: true }).notNull(),
+    count: integer('count').notNull().default(0),
+  },
+  (table) => [uniqueIndex('request_window_user_minute').on(table.userId, table.minute)],
+)

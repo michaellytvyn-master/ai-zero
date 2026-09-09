@@ -1,4 +1,5 @@
 import { purgeExpiredImages } from '@/lib/images'
+import { purgeOldRequestWindows } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -16,5 +17,6 @@ export async function GET(request: Request): Promise<Response> {
     return Response.json({ error: { type: 'forbidden' } }, { status: 403 })
   }
 
-  return Response.json(await purgeExpiredImages())
+  const [images, windows] = await Promise.all([purgeExpiredImages(), purgeOldRequestWindows()])
+  return Response.json({ images, staleRateWindows: windows })
 }

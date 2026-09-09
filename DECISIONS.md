@@ -636,3 +636,36 @@ Search stays off on the shared pool. It costs the operator more than a plain
 answer and `groq/compound` has a lower daily ceiling than the chat models, so
 hard constraint 2 still applies: the smallest model, whatever was asked for. The
 toggle is disabled with that reason rather than silently ignored.
+
+## 35. A ceiling on every account, not just the free pool
+
+The question was whether many users' requests leaving one server IP would get
+the service blocked. Checking rather than assuming:
+
+- **Groq's limits are per organisation, not per IP**, stated plainly in its rate
+  limit documentation, and no IP-based limit is documented at all. A thousand
+  users with their own keys are a thousand separate quotas; routing them through
+  one host does not pool them.
+- **"One IP" is not what Vercel does.** Functions egress from a shared, rotating
+  pool by default; a fixed address is a separate paid option.
+- **The extension already avoids the question** for most bring-your-own-key
+  traffic: it calls providers straight from the user's browser, on their own
+  address. That was built for hard constraint 1, and distributing egress is a
+  second benefit of it.
+
+But the question exposed a real gap, and not the one asked about. **A user with
+their own key had no ceiling here at all.** The demo cap only ever applied to
+the shared pool, so a runaway script against the public API could push unbounded
+traffic out through this server's egress — which is what would actually attract
+attention, and would land on everyone sharing that egress rather than on the
+account responsible.
+
+Every route that reaches a provider now claims a slot first: chat, the
+OpenAI-compatible endpoint, images, transcription and link reading. Sixty
+requests a minute per account by default, `REQUESTS_PER_MINUTE_PER_USER` to
+change it, answered with 429 and a `retry-after`.
+
+It is the same conditional upsert the demo cap uses, because a burst is exactly
+what a runaway client sends and a read-then-write check would let two requests
+take the last slot. Forty simultaneous claims against a limit of ten leave
+exactly ten, and there is a test that says so.

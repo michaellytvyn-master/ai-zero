@@ -267,6 +267,17 @@ Everything a signed-in person needs is under `/dashboard`: an overview with
 usage and savings, provider key connections, sign-in and connected devices, and
 usage history. `/chat` is the chat itself.
 
+## Rate limiting
+
+Provider quotas are per organisation, not per IP, so many users with their own
+keys do not compete for one allowance. What they could do is make this server's
+outbound traffic look abusive — which would land on everyone sharing it.
+
+So every route that reaches a provider claims a slot first, whoever the keys
+belong to: 60 requests a minute per account by default, `REQUESTS_PER_MINUTE_PER_USER`
+to change it, 429 with a `retry-after` when exceeded. The claim is an atomic
+conditional upsert, so a burst cannot slip two requests past the last slot.
+
 ## Privacy properties held by the code
 
 - Provider keys are encrypted with AES-256-GCM before they reach Postgres. The

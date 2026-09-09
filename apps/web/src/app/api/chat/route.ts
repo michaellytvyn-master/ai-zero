@@ -13,6 +13,7 @@ import {
 import { buildRouterContext, effectiveModel } from '@/lib/router-deps'
 import { demoExhaustedResponse, unauthenticatedResponse } from '@/lib/responses'
 import { claimDemoMessage } from '@/lib/usage'
+import { claimRequestSlot, tooManyRequests } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -42,6 +43,12 @@ export async function POST(request: Request): Promise<Response> {
     if (conversationId === null) {
       return Response.json({ error: { type: 'not_found' } }, { status: 404 })
     }
+
+    // Applies whoever the keys belong to. Provider quotas are per organisation,
+    // so many users cost nothing — but one runaway client would make this
+    // server's egress look abusive to everyone sharing it.
+    const slot = await claimRequestSlot(user.id)
+    if (!slot.allowed) return tooManyRequests(slot)
 
     const { deps, usingOwnKeys } = await buildRouterContext(user.id, 'router')
     if (!usingOwnKeys) {
