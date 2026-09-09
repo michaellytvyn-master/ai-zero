@@ -25,6 +25,8 @@ const schema = z.object({
   mode: z.string().optional(),
   /** Routes the turn to a model that can search, rather than guessing. */
   searchWeb: z.boolean().default(false),
+  /** Text of files the user attached, already extracted in their browser. */
+  attached: z.string().max(64_000).optional(),
 })
 
 /** The app's own chat: same failover, but the conversation is persisted. */

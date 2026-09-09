@@ -3,57 +3,43 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
-const LINKS = [
+const SECTIONS = [
   {
-    group: 'Account',
+    group: 'Workspace',
     items: [
-      { href: '/dashboard', label: 'Overview' },
+      { href: '/settings', label: 'Overview' },
       { href: '/chat', label: 'Chat' },
     ],
   },
   {
     group: 'Connections',
     items: [
-      { href: '/dashboard/keys', label: 'Provider keys' },
-      { href: '/dashboard/settings', label: 'Sign-in and devices' },
-      { href: '/dashboard/api', label: 'API keys' },
+      { href: '/settings/keys', label: 'Provider keys' },
+      { href: '/settings/api', label: 'API access' },
+      { href: '/settings/account', label: 'Sign-in and devices' },
     ],
   },
-  { group: 'Activity', items: [{ href: '/dashboard/usage', label: 'Usage and savings' }] },
+  {
+    group: 'Activity',
+    items: [{ href: '/settings/limits', label: 'Limits and statistics' }],
+  },
 ]
 
-export default function SideNav({ admin }: { admin: boolean }) {
+export default function SideNav() {
   const path = usePathname()
 
   return (
     <nav className="side">
-      {LINKS.map((section) => (
+      {SECTIONS.map((section) => (
         <div key={section.group}>
           <div className="group">{section.group}</div>
           {section.items.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={path === item.href ? 'current' : ''}
-              style={{ display: 'block' }}
-            >
+            <Link key={item.href} href={item.href} className={path === item.href ? 'current' : ''}>
               {item.label}
             </Link>
           ))}
         </div>
       ))}
-      {admin && (
-        <div>
-          <div className="group">Operator</div>
-          <Link
-            href="/admin"
-            className={path === '/admin' ? 'current' : ''}
-            style={{ display: 'block' }}
-          >
-            All usage
-          </Link>
-        </div>
-      )}
     </nav>
   )
 }

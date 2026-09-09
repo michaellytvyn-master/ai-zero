@@ -6,11 +6,12 @@ import { useRef, useState } from 'react'
 import type { ModelChoice } from '@zca/providers'
 import ConversationList from './conversation-list'
 import MessageLog from './message-log'
+import { type Attachment, asAttachmentMessage } from '@zca/shared'
 import { streamChatTurn } from '@/lib/chat-stream'
 import { generateImage } from '@/lib/generate-image'
 import ChatControls from './chat-controls'
 import { useRememberedMode } from './use-remembered-mode'
-import MicButton from './mic-button'
+import Composer from './composer'
 import { type Turn, appendToLast, replaceLast } from './turn'
 import KeyPrompt from './key-prompt'
 
@@ -42,6 +43,7 @@ export default function ChatClient(props: {
   const [error, setError] = useState<string | null>(null)
   const [makeImage, setMakeImage] = useState(false)
   const [searchWeb, setSearchWeb] = useState(false)
+  const [files, setFiles] = useState<Attachment[]>([])
   const [remaining, setRemaining] = useState(props.demoRemaining)
   const [model, setModel] = useState(props.initialModel)
   const [mode, chooseMode] = useRememberedMode()
@@ -81,7 +83,14 @@ export default function ChatClient(props: {
 
     let spent = false
     await streamChatTurn(
-      { content, model, mode, searchWeb, conversationId: conversationId.current },
+      {
+        content,
+        model,
+        mode,
+        searchWeb,
+        attached: files.length === 0 ? null : asAttachmentMessage(files),
+        conversationId: conversationId.current,
+      },
       {
         onMeta: (meta) => {
           conversationId.current = meta.conversationId
@@ -111,6 +120,7 @@ export default function ChatClient(props: {
     if (spent && remaining !== null) {
       setRemaining((value) => (value === null ? null : Math.max(0, value - 1)))
     }
+    setFiles([])
     setBusy(false)
     router.refresh()
   }
@@ -130,7 +140,7 @@ export default function ChatClient(props: {
           {!props.usingOwnKeys && remaining !== null && (
             <span>
               {remaining} of {props.demoLimit} free messages left today ·{' '}
-              <Link href="/dashboard/keys">add your own key</Link>
+              <Link href="/settings/keys">add your own key</Link>
             </span>
           )}
           {props.usingOwnKeys && <span>running on your own keys</span>}
@@ -154,27 +164,15 @@ export default function ChatClient(props: {
           onSearchWeb={setSearchWeb}
         />
 
-        <div className="composer-box">
-          <textarea
-            rows={2}
-            value={draft}
-            placeholder="Ask something"
-            onChange={(event) => setDraft(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault()
-                void send()
-              }
-            }}
-          />
-          <MicButton
-            onText={(text) => setDraft((previous) => (previous ? `${previous} ${text}` : text))}
-            onError={(message) => setError(message.length > 0 ? message : null)}
-          />
-          <button type="button" className="primary" disabled={busy} onClick={() => void send()}>
-            Send
-          </button>
-        </div>
+        <Composer
+          draft={draft}
+          onDraft={setDraft}
+          onSend={() => void send()}
+          busy={busy}
+          files={files}
+          onFiles={setFiles}
+          onError={setError}
+        />
       </section>
     </main>
   )

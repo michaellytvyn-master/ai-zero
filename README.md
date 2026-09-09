@@ -207,7 +207,7 @@ feature is simply off.
 
 ## Your own API
 
-`/dashboard/api` issues `zca_` keys for calling this service from your own code.
+`/settings/api` issues `zca_` keys for calling this service from your own code.
 The endpoint is OpenAI-compatible, so any client that accepts a base URL works:
 
 ```bash
@@ -276,7 +276,7 @@ be raised later without locking anyone out.
 Google is optional. With no `AUTH_GOOGLE_ID` the sign-in page simply omits the
 button; email and password still work, and the rest of the site does not care.
 
-Everything a signed-in person needs is under `/dashboard`: an overview with
+Everything a signed-in person needs is under `/settings`: an overview with
 usage and savings, provider key connections, sign-in and connected devices, and
 usage history. `/chat` is the chat itself.
 

@@ -46,7 +46,7 @@ export async function updatePassword(
     return { error: 'Could not update the password.', done: null }
   }
 
-  revalidatePath('/dashboard/settings')
+  revalidatePath('/settings/account')
   return { error: null, done: existing ? 'Password updated.' : 'Password set.' }
 }
 
@@ -54,5 +54,5 @@ export async function revokeExtension(form: FormData): Promise<void> {
   const user = await requireUser()
   const id = form.get('id')
   if (typeof id === 'string') await revokeExtensionSessionById(user.id, id)
-  revalidatePath('/dashboard/settings')
+  revalidatePath('/settings/account')
 }

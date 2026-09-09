@@ -21,7 +21,16 @@ export default function MessageList(props: {
             {turn.role}
             {turn.answeredBy != null && ` · ${turn.answeredBy}`}
           </div>
-          {turn.content || (props.busy && turn.content === '' ? '…' : '')}
+          {turn.content ||
+            (props.busy && turn.content === '' ? (
+              <span className="typing" role="status" aria-label="Thinking">
+                <i />
+                <i />
+                <i />
+              </span>
+            ) : (
+              ''
+            ))}
         </div>
       ))}
     </div>

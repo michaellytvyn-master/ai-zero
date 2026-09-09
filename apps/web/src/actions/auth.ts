@@ -39,7 +39,7 @@ export async function signInWithPassword(_previous: FormState, form: FormData): 
     return { error: 'Wrong email or password.' }
   }
 
-  redirect('/dashboard')
+  redirect('/settings')
 }
 
 export async function registerAccount(_previous: FormState, form: FormData): Promise<FormState> {
@@ -58,9 +58,9 @@ export async function registerAccount(_previous: FormState, form: FormData): Pro
   }
 
   await signIn('password', { email, password, redirect: false })
-  redirect('/dashboard')
+  redirect('/settings')
 }
 
 export async function signInWithGoogle(): Promise<void> {
-  await signIn('google', { redirectTo: '/dashboard' })
+  await signIn('google', { redirectTo: '/settings' })
 }

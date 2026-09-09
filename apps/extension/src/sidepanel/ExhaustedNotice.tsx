@@ -19,7 +19,7 @@ export default function ExhaustedNotice({
           </a>
         </div>
       ))}
-      <a href={`${SITE_URL}/dashboard/keys`} target="_blank" rel="noreferrer">
+      <a href={`${SITE_URL}/settings/keys`} target="_blank" rel="noreferrer">
         Then add it to your account
       </a>
     </div>

@@ -33,6 +33,10 @@ export default async function ChatPage({
 
   return (
     <ChatClient
+      // Remounts when the conversation changes. Without it React keeps the same
+      // instance across the navigation, and the message list — seeded once by a
+      // lazy initialiser — keeps showing the previous chat.
+      key={active?.summary.id ?? 'new'}
       conversations={conversations.items.map((item) => ({
         id: item.id,
         title: item.title,

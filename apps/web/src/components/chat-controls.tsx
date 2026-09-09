@@ -1,17 +1,9 @@
 'use client'
 
 import type { ModelChoice } from '@zca/providers'
-import { type ResponseMode, responseMode, responseModes } from '@zca/shared'
+import type { ResponseMode } from '@zca/shared'
+import EffortSlider from './effort-slider'
 import ModelPicker from './model-picker'
-
-const SELECT_STYLE = {
-  font: 'inherit',
-  padding: '5px 8px',
-  borderRadius: 7,
-  border: '1px solid var(--border)',
-  background: 'var(--bg)',
-  color: 'var(--text)',
-} as const
 
 export default function ChatControls(props: {
   mode: ResponseMode
@@ -27,53 +19,37 @@ export default function ChatControls(props: {
 }) {
   return (
     <>
-      <div className="row" style={{ flexWrap: 'wrap' }}>
-        <label className="row" style={{ fontSize: 13, gap: 6 }}>
-          <input
-            type="checkbox"
-            checked={props.makeImage}
-            onChange={(event) => props.onMakeImage(event.target.checked)}
-            style={{ width: 'auto' }}
-          />
-          <span className="muted">Make an image</span>
-        </label>
+      <div className="row" style={{ flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        <EffortSlider value={props.mode} onChange={props.onMode} />
 
-        <label
-          className="row"
-          style={{ fontSize: 13, gap: 6, opacity: props.usingOwnKeys ? 1 : 0.5 }}
-          title={
-            props.usingOwnKeys
-              ? 'Answers from a model that searches as it works'
-              : 'The shared pool runs the smallest model; add your own key to search'
-          }
-        >
-          <input
-            type="checkbox"
-            checked={props.searchWeb && props.usingOwnKeys}
-            disabled={!props.usingOwnKeys}
-            onChange={(event) => props.onSearchWeb(event.target.checked)}
-            style={{ width: 'auto' }}
-          />
-          <span className="muted">Search the web</span>
-        </label>
+        <div className="stack" style={{ gap: 8 }}>
+          <label className="row small" style={{ gap: 7 }}>
+            <input
+              type="checkbox"
+              checked={props.makeImage}
+              onChange={(event) => props.onMakeImage(event.target.checked)}
+            />
+            <span className="muted">Make an image</span>
+          </label>
 
-        <label className="row" style={{ fontSize: 13, gap: 8 }}>
-          <span className="muted">Answer</span>
-          <select
-            value={props.mode}
-            onChange={(event) => props.onMode(event.target.value as ResponseMode)}
-            style={SELECT_STYLE}
+          <label
+            className="row small"
+            style={{ gap: 7, opacity: props.usingOwnKeys ? 1 : 0.45 }}
+            title={
+              props.usingOwnKeys
+                ? 'Answers from a model that searches as it works'
+                : 'The trial runs the smallest model; connect your own key to search'
+            }
           >
-            {responseModes.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.label} — {item.hint}
-              </option>
-            ))}
-          </select>
-        </label>
-        <span className="muted" style={{ fontSize: 12 }}>
-          caps the reply at {responseMode(props.mode).maxTokens} tokens
-        </span>
+            <input
+              type="checkbox"
+              checked={props.searchWeb && props.usingOwnKeys}
+              disabled={!props.usingOwnKeys}
+              onChange={(event) => props.onSearchWeb(event.target.checked)}
+            />
+            <span className="muted">Search the web</span>
+          </label>
+        </div>
       </div>
 
       {props.searchWeb && props.usingOwnKeys && (

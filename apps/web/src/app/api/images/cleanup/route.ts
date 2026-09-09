@@ -1,4 +1,5 @@
 import { purgeExpiredImages } from '@/lib/images'
+import { purgeOldLoginAttempts } from '@/lib/admin-auth'
 import { purgeOldRequestWindows } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
@@ -17,6 +18,10 @@ export async function GET(request: Request): Promise<Response> {
     return Response.json({ error: { type: 'forbidden' } }, { status: 403 })
   }
 
-  const [images, windows] = await Promise.all([purgeExpiredImages(), purgeOldRequestWindows()])
-  return Response.json({ images, staleRateWindows: windows })
+  const [images, windows, attempts] = await Promise.all([
+    purgeExpiredImages(),
+    purgeOldRequestWindows(),
+    purgeOldLoginAttempts(),
+  ])
+  return Response.json({ images, staleRateWindows: windows, staleLoginAttempts: attempts })
 }

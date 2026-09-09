@@ -204,3 +204,18 @@ export const requestWindows = pgTable(
   },
   (table) => [uniqueIndex('request_window_user_minute').on(table.userId, table.minute)],
 )
+
+/**
+ * Failed sign-in attempts, keyed by whatever identifies the caller. Separate
+ * from request_window because that one is keyed to a user row, and the whole
+ * point here is throttling people who are not signed in.
+ */
+export const loginAttempts = pgTable(
+  'login_attempt',
+  {
+    key: text('key').notNull(),
+    minute: timestamp('minute', { withTimezone: true }).notNull(),
+    count: integer('count').notNull().default(0),
+  },
+  (table) => [uniqueIndex('login_attempt_key_minute').on(table.key, table.minute)],
+)

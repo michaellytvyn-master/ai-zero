@@ -1,12 +1,17 @@
+import { formatUsd, referenceModel, referenceModels, savingsFrom } from '@zca/pricing'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { formatUsd, referenceModel, referenceModels, savingsFrom } from '@zca/pricing'
 import { safeAuth } from '@/auth'
+import LimitMeter from '@/components/limit-meter'
+import { runtimeConfig } from '@/config'
+import { limitsFor } from '@/lib/limits'
+import { listProviderKeys } from '@/lib/provider-keys'
 import { usageTotalsForUser } from '@/lib/savings'
+import { demoRemaining } from '@/lib/usage'
 
 export const dynamic = 'force-dynamic'
 
-export default async function SavingsPage({
+export default async function LimitsPage({
   searchParams,
 }: {
   searchParams: Promise<{ model?: string }>
@@ -20,27 +25,51 @@ export default async function SavingsPage({
     ? referenceModel(requested)
     : referenceModel()
 
-  const savings = savingsFrom(await usageTotalsForUser(userId), model)
+  const keys = await listProviderKeys(userId)
+  const trial = keys.length > 0 ? null : await demoRemaining(userId)
+  const [limits, savings] = await Promise.all([
+    limitsFor(userId, {
+      trialRemaining: trial?.remaining ?? null,
+      trialLimit: runtimeConfig().DEMO_MESSAGES_PER_ACCOUNT_PER_DAY,
+    }),
+    usageTotalsForUser(userId).then((totals) => savingsFrom(totals, model)),
+  ])
 
   return (
     <>
-      <h1>What this would have cost</h1>
+      <h1>Limits and statistics</h1>
+      <p className="muted">
+        What this service allows you today. Your providers enforce their own allowances on their
+        side, and those belong to your accounts rather than to us.
+      </p>
 
-      <div className="card">
-        <div style={{ fontSize: 40, fontWeight: 600, lineHeight: 1.1 }}>
-          {formatUsd(savings.microUsd)}
+      <div className="stack" style={{ gap: 10, marginBottom: 28 }}>
+        {limits.map((limit) => (
+          <LimitMeter key={limit.label} {...limit} />
+        ))}
+      </div>
+
+      <h2>What you did not spend</h2>
+      <div className="tiles" style={{ marginBottom: 14 }}>
+        <div className="tile">
+          <div className="value">{formatUsd(savings.microUsd)}</div>
+          <div className="label">estimated cost avoided</div>
         </div>
-        <p className="muted" style={{ margin: '6px 0 0' }}>
-          Estimated cost if the same {savings.inputTokens.toLocaleString()} input and{' '}
-          {savings.outputTokens.toLocaleString()} output tokens had run on {model.label}, across{' '}
-          {savings.requests.toLocaleString()} requests. This is an estimate, not a bill, and not
-          money you earned.
-        </p>
+        <div className="tile">
+          <div className="value">{savings.requests.toLocaleString()}</div>
+          <div className="label">requests answered</div>
+        </div>
+        <div className="tile">
+          <div className="value">
+            {(savings.inputTokens + savings.outputTokens).toLocaleString()}
+          </div>
+          <div className="label">tokens processed</div>
+        </div>
       </div>
 
       <div className="row" style={{ flexWrap: 'wrap', marginBottom: 18 }}>
         {referenceModels.map((entry) => (
-          <Link key={entry.id} href={`/dashboard/usage?model=${entry.id}`}>
+          <Link key={entry.id} href={`/settings/limits?model=${entry.id}`}>
             <button type="button" className={entry.id === model.id ? 'primary' : ''}>
               vs {entry.label}
             </button>
@@ -48,13 +77,13 @@ export default async function SavingsPage({
         ))}
       </div>
 
-      <p className="muted" style={{ fontSize: 13 }}>
+      <p className="muted small">
         {model.why} Priced at ${model.inputPerMillionUsd}/M input and ${model.outputPerMillionUsd}/M
         output, read from{' '}
         <a href={model.source} target="_blank" rel="noreferrer">
           {model.vendor}
         </a>{' '}
-        on {model.checkedOn}.
+        on {model.checkedOn}. An estimate, not a bill.
       </p>
 
       <h2>By provider</h2>
@@ -65,7 +94,7 @@ export default async function SavingsPage({
             <th>Requests</th>
             <th>Tokens in</th>
             <th>Tokens out</th>
-            <th>Estimated cost avoided</th>
+            <th>Cost avoided</th>
           </tr>
         </thead>
         <tbody>
@@ -87,11 +116,6 @@ export default async function SavingsPage({
           )}
         </tbody>
       </table>
-
-      <p className="muted" style={{ fontSize: 13 }}>
-        Failed requests are left out: they produced no tokens, so counting them would inflate the
-        number without measuring anything.
-      </p>
     </>
   )
 }

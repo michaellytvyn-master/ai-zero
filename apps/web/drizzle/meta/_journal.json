@@ -36,6 +36,13 @@
       "when": 1788913450050,
       "tag": "0004_aspiring_franklin_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788922093155,
+      "tag": "0005_cold_wild_pack",
+      "breakpoints": true
     }
   ]
 }

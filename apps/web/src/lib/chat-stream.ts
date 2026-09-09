@@ -27,6 +27,7 @@ export interface ChatRequestBody {
   readonly mode: string
   readonly conversationId: string | null
   readonly searchWeb: boolean
+  readonly attached: string | null
 }
 
 /**
@@ -46,6 +47,7 @@ export async function streamChatTurn(
       model: body.model,
       mode: body.mode,
       searchWeb: body.searchWeb,
+      ...(body.attached !== null && { attached: body.attached }),
       ...(body.conversationId !== null && { conversationId: body.conversationId }),
     }),
   })

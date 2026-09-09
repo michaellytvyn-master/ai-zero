@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function SignInPage() {
   const session = await safeAuth()
-  if (session?.user !== undefined) redirect('/dashboard')
+  if (session?.user !== undefined) redirect('/settings')
   if (!isDatabaseConfigured() || !isSessionConfigured()) return <SetupNeeded />
 
   return (

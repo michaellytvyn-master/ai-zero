@@ -26,7 +26,7 @@ export default async function LandingPage() {
               {signedIn ? 'Open the chat' : 'Create an account'}
             </button>
           </Link>
-          <Link href={signedIn ? '/dashboard/keys' : '/signin'}>
+          <Link href={signedIn ? '/settings/keys' : '/signin'}>
             <button type="button">{signedIn ? 'Connect your keys' : 'Sign in'}</button>
           </Link>
         </div>
@@ -141,7 +141,7 @@ export default async function LandingPage() {
         <div className="inner">
           <h2>Bring your own keys</h2>
           <p className="muted">They are free, they are yours, and they stay yours.</p>
-          <Link href={signedIn ? '/dashboard/keys' : '/register'}>
+          <Link href={signedIn ? '/settings/keys' : '/register'}>
             <button className="primary" type="button">
               {signedIn ? 'Connect your keys' : 'Create an account'}
             </button>

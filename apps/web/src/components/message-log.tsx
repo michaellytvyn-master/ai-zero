@@ -18,7 +18,16 @@ export default function MessageLog({ turns, busy }: { turns: Turn[]; busy: boole
               model={turn.image.model}
             />
           ) : (
-            turn.content || (busy && index === turns.length - 1 ? '…' : '')
+            turn.content ||
+            (busy && index === turns.length - 1 ? (
+              <span className="typing" role="status" aria-label="Thinking">
+                <i />
+                <i />
+                <i />
+              </span>
+            ) : (
+              ''
+            ))
           )}
           {turn.pages !== undefined && turn.pages.length > 0 && (
             <div className="sources">

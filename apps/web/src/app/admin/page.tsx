@@ -1,18 +1,15 @@
-import { notFound, redirect } from 'next/navigation'
-import { safeAuth } from '@/auth'
-import { isAdmin } from '@/config'
 import { formatUsd, referenceModel, savingsFrom } from '@zca/pricing'
+import { redirect } from 'next/navigation'
+import { signOutAdmin } from './actions'
+import { isAdminSignedIn } from '@/lib/admin-auth'
 import { dailyRows, providerRows, userRows } from '@/lib/admin'
 import { usageTotalsForEveryone } from '@/lib/savings'
 
 export const dynamic = 'force-dynamic'
+export const metadata = { title: 'Operator', robots: { index: false, follow: false } }
 
 export default async function AdminPage() {
-  const session = await safeAuth()
-  const email = session?.user?.email
-  if (typeof email !== 'string') redirect('/signin')
-  // 404 rather than 403: a non-admin should not learn the page exists.
-  if (!isAdmin(email)) notFound()
+  if (!(await isAdminSignedIn())) redirect('/admin/login')
 
   const [people, providers, days, totals] = await Promise.all([
     userRows(),
@@ -22,20 +19,39 @@ export default async function AdminPage() {
   ])
   const model = referenceModel()
   const savings = savingsFrom(totals, model)
+  const active = people.filter((person) => person.requests > 0).length
 
   return (
-    <main className="wrap" style={{ maxWidth: 1100 }}>
-      <h1>Usage</h1>
+    <main className="wrap" style={{ maxWidth: 1080 }}>
+      <div className="row">
+        <h1 style={{ margin: 0 }}>Operator</h1>
+        <span className="spacer" style={{ marginLeft: 'auto' }} />
+        <form action={signOutAdmin}>
+          <button type="submit">Sign out</button>
+        </form>
+      </div>
       <p className="muted">
-        Metadata only. Conversation content is never shown here and is not queryable from this page.
+        Metadata only. Conversation content is never shown here and no query on this page can reach
+        it.
       </p>
 
-      <div className="card">
-        <div style={{ fontSize: 28, fontWeight: 600 }}>{formatUsd(savings.microUsd)}</div>
-        <p className="muted" style={{ margin: '4px 0 0' }}>
-          Estimated cost of all {savings.requests.toLocaleString()} answered requests if they had
-          run on {model.label} instead. An estimate, not a bill.
-        </p>
+      <div className="tiles" style={{ margin: '20px 0 28px' }}>
+        <div className="tile">
+          <div className="value">{people.length.toLocaleString()}</div>
+          <div className="label">accounts</div>
+        </div>
+        <div className="tile">
+          <div className="value">{active.toLocaleString()}</div>
+          <div className="label">have sent something</div>
+        </div>
+        <div className="tile">
+          <div className="value">{savings.requests.toLocaleString()}</div>
+          <div className="label">requests answered</div>
+        </div>
+        <div className="tile">
+          <div className="value">{formatUsd(savings.microUsd)}</div>
+          <div className="label">would have cost on {model.label}</div>
+        </div>
       </div>
 
       <h2>Providers</h2>
@@ -54,13 +70,11 @@ export default async function AdminPage() {
           {providers.map((row) => (
             <tr key={`${row.providerId}-${row.keyOwner}`}>
               <td>{row.providerId}</td>
-              <td className="muted">{row.keyOwner === 'user' ? "user's own" : 'demo pool'}</td>
-              <td>{row.requests}</td>
+              <td className="muted">{row.keyOwner === 'user' ? "user's own" : 'trial pool'}</td>
+              <td>{row.requests.toLocaleString()}</td>
               <td>{row.totalTokens.toLocaleString()}</td>
               <td>{row.avgLatencyMs} ms</td>
-              <td style={row.failures > 0 ? { color: 'var(--danger)' } : undefined}>
-                {row.failures}
-              </td>
+              <td className={row.failures > 0 ? 'danger' : undefined}>{row.failures}</td>
             </tr>
           ))}
           {providers.length === 0 && (
@@ -73,7 +87,7 @@ export default async function AdminPage() {
         </tbody>
       </table>
 
-      <h2>Users</h2>
+      <h2>Accounts</h2>
       <table>
         <thead>
           <tr>
@@ -90,7 +104,7 @@ export default async function AdminPage() {
             <tr key={row.id}>
               <td>{row.email}</td>
               <td className="muted">{row.createdAt.toISOString().slice(0, 10)}</td>
-              <td>{row.requests}</td>
+              <td>{row.requests.toLocaleString()}</td>
               <td>{row.inputTokens.toLocaleString()}</td>
               <td>{row.outputTokens.toLocaleString()}</td>
               <td className="muted">
@@ -116,7 +130,7 @@ export default async function AdminPage() {
           {days.map((row) => (
             <tr key={row.day}>
               <td>{row.day}</td>
-              <td>{row.requests}</td>
+              <td>{row.requests.toLocaleString()}</td>
               <td>{row.totalTokens.toLocaleString()}</td>
             </tr>
           ))}

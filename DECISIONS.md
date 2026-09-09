@@ -725,3 +725,71 @@ polyfill.
 
 Grouping and the badge both run after `sidePanel.open`, never before, for the
 reason in decision 30.
+
+## 38. Switching chats showed the previous one
+
+`ChatClient` seeds its message list with a lazy `useState` initialiser, which
+runs once per mounted component. Navigating from one conversation to another
+kept the same component in the same position of the tree, so React reused the
+instance and the list never re-seeded: the URL and the sidebar changed, the
+messages did not.
+
+Fixed by keying the component on the conversation id, so a different chat is a
+different component and remounts. An effect syncing state to props would have
+worked too and would have been the worse answer — it turns "this component is
+about that conversation" into a rule someone has to remember.
+
+## 39. Dark and green, by commitment
+
+A palette is one of the few things people remember about a tool, and a
+green-on-black identity only works if it is always the identity. The light theme
+is gone rather than made to coexist: `color-scheme: dark`, one set of tokens,
+and neon reserved for what is interactive — focus rings, the primary button,
+meter fills, the effort knob.
+
+The extension panel uses the same tokens, so the two surfaces read as one
+product.
+
+Everything moving obeys `prefers-reduced-motion`.
+
+## 40. Effort is a slider, not a dropdown
+
+Response modes are ordered — cheaper to more thorough — and a dropdown hides
+that. The control is a range input styled as a track with dots and a glowing
+knob, so dragging, arrow keys and screen readers all work without
+reimplementing them, and the ordering is visible.
+
+## 41. Naming follows what a page is for
+
+`/dashboard` became `/settings`, because for a user it is where their things
+are configured. The operator's view moved out of the user's navigation
+entirely. `/settings/limits` is what replaced it in that slot: what this service
+allows you today, with meters, alongside the savings figures.
+
+Provider allowances are deliberately absent from that page. They belong to the
+user's provider account, are enforced there, and this service can neither read
+them nor honestly guess.
+
+## 42. The operator area has its own door
+
+`ADMIN_EMAILS` is gone. `/admin` is not a page a user account can reach by
+having the right address on it; it is a separate login with `ADMIN_USERNAME` and
+`ADMIN_PASSWORD` from the environment, and unset means there is nothing to sign
+in to.
+
+Guessing is made expensive three ways: an arithmetic question signed with a
+short expiry so the server keeps no state and an old page cannot be replayed;
+five attempts a minute per caller, counted **before** anything is checked so
+failing early costs the same as failing late; and a wrong username answering
+exactly like a wrong password, both compared in constant time.
+
+## 43. Files are read in the browser
+
+A text file is already text. Uploading one so the server can send it straight
+back would add a round trip, a storage question and a privacy question for
+nothing, so the paperclip reads it with the File API and sends the extracted
+text as context.
+
+The consequence is honest and stated: only formats a browser can turn into text
+are accepted. PDF and DOCX would need a parser, so they are refused by name
+rather than half-read into mojibake.

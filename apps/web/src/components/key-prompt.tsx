@@ -21,7 +21,7 @@ export default function KeyPrompt({
             Get a free {item.label} key
           </a>
         ))}
-        <Link href="/dashboard/keys">
+        <Link href="/settings/keys">
           <button type="button" className="primary">
             Add it here
           </button>

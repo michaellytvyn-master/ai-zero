@@ -53,7 +53,7 @@ export default function Header(props: {
             />
             Group
           </label>
-          <a href={`${SITE_URL}/dashboard/keys`} target="_blank" rel="noreferrer">
+          <a href={`${SITE_URL}/settings/keys`} target="_blank" rel="noreferrer">
             Keys
           </a>
           <button type="button" className="linklike" onClick={props.onSignOut}>

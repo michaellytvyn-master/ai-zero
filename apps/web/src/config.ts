@@ -25,7 +25,6 @@ const googleSchema = z.object({
 })
 
 const runtimeSchema = z.object({
-  ADMIN_EMAILS: z.string().default(''),
   DEMO_MESSAGES_PER_ACCOUNT_PER_DAY: z.coerce.number().int().positive().default(10),
   DEMO_MODEL: z.string().min(1).default('auto'),
   FIRST_TOKEN_TIMEOUT_MS: z.coerce.number().int().positive().default(8000),
@@ -81,13 +80,4 @@ export function isSessionConfigured(): boolean {
 
 export function isDatabaseConfigured(): boolean {
   return databaseSchema.safeParse(process.env).success
-}
-
-export function isAdmin(email: string | null | undefined): boolean {
-  if (!email) return false
-  const allowed = runtimeConfig()
-    .ADMIN_EMAILS.split(',')
-    .map((value) => value.trim().toLowerCase())
-    .filter((value) => value.length > 0)
-  return allowed.includes(email.toLowerCase())
 }

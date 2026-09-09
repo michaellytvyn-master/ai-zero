@@ -20,6 +20,8 @@ const alsoDocumented = [
   'CLOUDINARY_API_SECRET',
   'CRON_SECRET',
   'REQUESTS_PER_MINUTE_PER_USER',
+  'ADMIN_USERNAME',
+  'ADMIN_PASSWORD',
 ]
 required.push(...alsoDocumented)
 const documented = new Set([...example.matchAll(/^([A-Z][A-Z0-9_]*)=/gm)].map((match) => match[1]))

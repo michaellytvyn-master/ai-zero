@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { safeAuth } from '@/auth'
-import { isAdmin } from '@/config'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -19,8 +18,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <nav className="nav">
           <Link href="/">Zero-Cost AI</Link>
           {email !== null && <Link href="/chat">Chat</Link>}
-          {email !== null && <Link href="/dashboard">Dashboard</Link>}
-          {isAdminSafe(email) && <Link href="/admin">Admin</Link>}
+          {email !== null && <Link href="/settings">Dashboard</Link>}
           <span className="spacer" />
           <Link href="/privacy" className="muted">
             Privacy
@@ -45,13 +43,4 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </body>
     </html>
   )
-}
-
-/** Runtime config has defaults for everything, but a bad value must not 500. */
-function isAdminSafe(email: string | null): boolean {
-  try {
-    return isAdmin(email)
-  } catch {
-    return false
-  }
 }

@@ -72,7 +72,7 @@ export default async function DashboardPage() {
           </div>
         ))}
       </div>
-      <Link href="/dashboard/keys">
+      <Link href="/settings/keys">
         <button type="button">Manage provider keys</button>
       </Link>
 

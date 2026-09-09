@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation'
 import { safeAuth } from '@/auth'
 import SideNav from '@/components/side-nav'
-import { isAdmin } from '@/config'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,7 +10,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="dash">
-      <SideNav admin={isAdmin(session.user.email)} />
+      <SideNav />
       <section>{children}</section>
     </div>
   )

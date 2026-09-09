@@ -19,7 +19,7 @@ export default function SavingsPanel({ savings }: { savings: Savings }) {
         </div>
       ))}
       <a
-        href={`${SITE_URL}/dashboard/usage`}
+        href={`${SITE_URL}/settings/limits`}
         target="_blank"
         rel="noreferrer"
         style={{ fontSize: 12 }}
