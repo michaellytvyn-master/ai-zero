@@ -6,9 +6,16 @@ export interface SignupOption {
   readonly signupUrl: string
 }
 
+export interface ReadPage {
+  readonly url: string
+  readonly title: string
+  readonly ok: boolean
+  readonly note: string
+}
+
 export interface StreamHandlers {
-  /** The conversation this landed in, and who actually answered. */
-  onMeta(meta: { conversationId: string; provider: string; model: string }): void
+  /** The conversation this landed in, who answered, and what was read first. */
+  onMeta(meta: { conversationId: string; provider: string; model: string; pages: ReadPage[] }): void
   onDelta(chunk: string): void
   onExhausted(options: SignupOption[]): void
   onFailed(message: string): void
@@ -19,6 +26,7 @@ export interface ChatRequestBody {
   readonly model: string
   readonly mode: string
   readonly conversationId: string | null
+  readonly searchWeb: boolean
 }
 
 /**
@@ -37,6 +45,7 @@ export async function streamChatTurn(
       content: body.content,
       model: body.model,
       mode: body.mode,
+      searchWeb: body.searchWeb,
       ...(body.conversationId !== null && { conversationId: body.conversationId }),
     }),
   })
@@ -60,6 +69,7 @@ export async function streamChatTurn(
         conversationId: String(event.data.conversationId),
         provider: String(event.data.provider),
         model: String(event.data.model),
+        pages: Array.isArray(event.data.pages) ? (event.data.pages as ReadPage[]) : [],
       })
     } else if (event.name === 'delta') {
       handlers.onDelta(String(event.data.content))

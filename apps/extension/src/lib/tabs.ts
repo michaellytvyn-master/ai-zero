@@ -8,6 +8,7 @@ export interface TabChat {
   readonly model: string
   readonly pageMode: PageMode
   readonly responseMode: ResponseMode
+  readonly searchWeb: boolean
   /**
    * A reply still arriving when the panel was torn down. Chrome destroys the
    * document as soon as the user leaves the tab, and the answer only reaches
@@ -25,6 +26,7 @@ export const EMPTY_TAB_CHAT: TabChat = {
   // what the question is about. Falls back to off if access was never granted.
   pageMode: 'text',
   responseMode: DEFAULT_RESPONSE_MODE,
+  searchWeb: false,
   pendingAnswer: null,
   pendingAnsweredBy: null,
 }

@@ -22,6 +22,8 @@ export default function ChatControls(props: {
   usingOwnKeys: boolean
   makeImage: boolean
   onMakeImage: (on: boolean) => void
+  searchWeb: boolean
+  onSearchWeb: (on: boolean) => void
 }) {
   return (
     <>
@@ -34,6 +36,25 @@ export default function ChatControls(props: {
             style={{ width: 'auto' }}
           />
           <span className="muted">Make an image</span>
+        </label>
+
+        <label
+          className="row"
+          style={{ fontSize: 13, gap: 6, opacity: props.usingOwnKeys ? 1 : 0.5 }}
+          title={
+            props.usingOwnKeys
+              ? 'Answers from a model that searches as it works'
+              : 'The shared pool runs the smallest model; add your own key to search'
+          }
+        >
+          <input
+            type="checkbox"
+            checked={props.searchWeb && props.usingOwnKeys}
+            disabled={!props.usingOwnKeys}
+            onChange={(event) => props.onSearchWeb(event.target.checked)}
+            style={{ width: 'auto' }}
+          />
+          <span className="muted">Search the web</span>
         </label>
 
         <label className="row" style={{ fontSize: 13, gap: 8 }}>
@@ -54,6 +75,13 @@ export default function ChatControls(props: {
           caps the reply at {responseMode(props.mode).maxTokens} tokens
         </span>
       </div>
+
+      {props.searchWeb && props.usingOwnKeys && (
+        <p className="muted small" style={{ margin: 0 }}>
+          Answers come from a model that searches as it works. Paste a link in any mode and the page
+          is read for you — no model can browse on its own.
+        </p>
+      )}
 
       {props.makeImage && (
         <p className="muted small" style={{ margin: 0 }}>

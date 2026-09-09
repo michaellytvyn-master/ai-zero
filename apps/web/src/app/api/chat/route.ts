@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { failureResponse, runFailover, type RouterEvent } from '@zca/router-core'
 import { applyResponseMode, responseMode } from '@zca/shared'
+import { SEARCH_MODEL, readLinkedPages } from '@/lib/web-context'
 import { UnauthenticatedError, requireUser } from '@/auth'
 import { runtimeConfig } from '@/config'
 import {
@@ -21,6 +22,8 @@ const schema = z.object({
   content: z.string().min(1).max(32_000),
   model: z.string().min(1).default('auto'),
   mode: z.string().optional(),
+  /** Routes the turn to a model that can search, rather than guessing. */
+  searchWeb: z.boolean().default(false),
 })
 
 /** The app's own chat: same failover, but the conversation is persisted. */
@@ -50,12 +53,25 @@ export async function POST(request: Request): Promise<Response> {
 
     await appendMessage(conversationId, { role: 'user', content: parsed.data.content })
 
+    // Models cannot browse. A link in the question is read here and handed over
+    // as material; a request to search goes to the one model that can.
+    const web = await readLinkedPages(parsed.data.content)
+    // Searching costs the operator more than a plain answer and runs on a model
+    // with a lower daily ceiling, so on the shared pool hard constraint 2 still
+    // wins: the smallest model, whatever was asked for.
+    const searching = parsed.data.searchWeb && usingOwnKeys
+    const requested = searching ? SEARCH_MODEL : effectiveModel(parsed.data.model, usingOwnKeys)
+
     const events = runFailover(
       deps,
       applyResponseMode(
         {
-          model: effectiveModel(parsed.data.model, usingOwnKeys),
-          messages: [...history, { role: 'user', content: parsed.data.content }],
+          model: requested,
+          messages: [
+            ...(web.message === null ? [] : [{ role: 'system' as const, content: web.message }]),
+            ...history,
+            { role: 'user' as const, content: parsed.data.content },
+          ],
           temperature: null,
           maxTokens: null,
         },
@@ -75,7 +91,7 @@ export async function POST(request: Request): Promise<Response> {
       return failureResponse(error)
     }
 
-    return streamAndPersist(events, selected, conversationId)
+    return streamAndPersist(events, selected, conversationId, web.pages)
   } catch (error) {
     if (error instanceof UnauthenticatedError) return unauthenticatedResponse()
     throw error
@@ -98,6 +114,7 @@ function streamAndPersist(
   events: AsyncGenerator<RouterEvent>,
   selected: Extract<RouterEvent, { kind: 'selected' }>,
   conversationId: string,
+  pages: { url: string; title: string; ok: boolean; note: string }[],
 ): Response {
   const encoder = new TextEncoder()
 
@@ -110,6 +127,7 @@ function streamAndPersist(
         conversationId,
         provider: selected.providerId,
         model: selected.model,
+        pages,
       })
 
       let answer = ''

@@ -20,6 +20,22 @@ export default function MessageLog({ turns, busy }: { turns: Turn[]; busy: boole
           ) : (
             turn.content || (busy && index === turns.length - 1 ? '…' : '')
           )}
+          {turn.pages !== undefined && turn.pages.length > 0 && (
+            <div className="sources">
+              {turn.pages.map((page) => (
+                <a
+                  key={page.url}
+                  href={page.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={page.ok ? '' : 'failed'}
+                  title={page.note}
+                >
+                  {page.title || new URL(page.url).hostname}
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       ))}
     </div>

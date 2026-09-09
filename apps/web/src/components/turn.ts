@@ -6,6 +6,8 @@ export interface Turn {
   model?: string | null
   /** Set instead of content when this turn is a generated picture. */
   image?: { url: string; expiresAt: string; model: string } | null
+  /** Pages read before answering, so the reply can be checked against them. */
+  pages?: { url: string; title: string; ok: boolean; note: string }[]
 }
 
 export function appendToLast(turns: Turn[], chunk: string): Turn[] {

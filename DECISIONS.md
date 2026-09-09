@@ -594,3 +594,45 @@ undo the project's premise.
 For the record, since the two get conflated: Groq's gpt-oss models have a
 131 072-token **context window** and the free tier allows 200 000 **tokens per
 day**. Different things. Nothing on Groq has a 200k window.
+
+## 34. Reading the web: links are fetched, search goes to a model that can
+
+A model cannot browse. Two separate answers, because they are separate problems.
+
+**A pasted link is read by the server** and handed to whatever model is
+answering, as material rather than instruction. This works with every model,
+including the small ones, because the fetching happens before the request.
+
+**A request to search goes to `groq/compound`**, which runs web search
+server-side on the same free tier and reports what it consulted. That is why no
+search provider or API key was added: the capability was already in the
+registry.
+
+The reply lists the pages that were read, failures included, so an answer can be
+checked against its sources rather than taken on trust.
+
+### The part that needed care
+
+Fetching a URL a user supplies is a request forgery primitive. Without checks
+the server would happily read `169.254.169.254` — the cloud metadata endpoint,
+where credentials live — or a database on localhost. So:
+
+- Only `http` and `https`. No credentials in the authority.
+- Every resolved address is checked against loopback, private, link-local,
+  carrier-grade NAT, multicast and reserved ranges, in both IPv4 and IPv6, and
+  through `::ffff:` mapping, which is the obvious way to smuggle a v4 address
+  past a v6 check.
+- **Every redirect hop is re-checked**, not just the first. A public host
+  answering 302 with a private target is the other obvious way past a check.
+- Two megabyte cap, twelve second timeout, four hops, and a content type that
+  has to be a readable page.
+
+A residual risk remains: DNS can change between the check and the connection.
+Closing it entirely means connecting to the resolved address directly and
+carrying the Host header, which is worth doing if this ever faces untrusted
+users at scale.
+
+Search stays off on the shared pool. It costs the operator more than a plain
+answer and `groq/compound` has a lower daily ceiling than the chat models, so
+hard constraint 2 still applies: the smallest model, whatever was asked for. The
+toggle is disabled with that reason rather than silently ignored.

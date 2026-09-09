@@ -18,6 +18,9 @@ export default function Composer(props: {
   showModelPicker: boolean
   responseMode: ResponseMode
   onResponseMode: (mode: ResponseMode) => void
+  searchWeb: boolean
+  onSearchWeb: (on: boolean) => void
+  canSearch: boolean
   attached: string | null
   session: Session
   onError: (message: string | null) => void
@@ -66,6 +69,16 @@ export default function Composer(props: {
             </option>
           ))}
         </select>
+
+        <label className="toggle" title="Answers from a model that searches as it works">
+          <input
+            type="checkbox"
+            checked={props.searchWeb}
+            disabled={!props.canSearch}
+            onChange={(event) => props.onSearchWeb(event.target.checked)}
+          />
+          Search
+        </label>
 
         <select
           value={props.pageMode}

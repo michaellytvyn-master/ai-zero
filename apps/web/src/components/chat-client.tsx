@@ -2,14 +2,14 @@
 
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import type { ModelChoice } from '@zca/providers'
-import { DEFAULT_RESPONSE_MODE, type ResponseMode, isResponseMode } from '@zca/shared'
 import ConversationList from './conversation-list'
 import MessageLog from './message-log'
 import { streamChatTurn } from '@/lib/chat-stream'
 import { generateImage } from '@/lib/generate-image'
 import ChatControls from './chat-controls'
+import { useRememberedMode } from './use-remembered-mode'
 import MicButton from './mic-button'
 import { type Turn, appendToLast, replaceLast } from './turn'
 import KeyPrompt from './key-prompt'
@@ -41,30 +41,11 @@ export default function ChatClient(props: {
   const [needsKey, setNeedsKey] = useState<SignupOption[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [makeImage, setMakeImage] = useState(false)
+  const [searchWeb, setSearchWeb] = useState(false)
   const [remaining, setRemaining] = useState(props.demoRemaining)
   const [model, setModel] = useState(props.initialModel)
-  // Remembered per browser: how you like answers is a preference, not a
-  // property of any one conversation.
-  const [mode, setMode] = useState<ResponseMode>(DEFAULT_RESPONSE_MODE)
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('responseMode')
-      if (isResponseMode(saved)) setMode(saved)
-    } catch {
-      // Private windows and blocked storage both land here; the default is fine.
-    }
-  }, [])
-
-  function chooseMode(next: ResponseMode) {
-    setMode(next)
-    try {
-      localStorage.setItem('responseMode', next)
-    } catch {
-      // Failing to remember the choice must not stop them making it.
-    }
-  }
-  const conversationId = useRef(props.activeId)
+  const [mode, chooseMode] = useRememberedMode()
+  const conversationId = useRef<string | null>(props.activeId)
 
   async function send() {
     const content = draft.trim()
@@ -100,7 +81,7 @@ export default function ChatClient(props: {
 
     let spent = false
     await streamChatTurn(
-      { content, model, mode, conversationId: conversationId.current },
+      { content, model, mode, searchWeb, conversationId: conversationId.current },
       {
         onMeta: (meta) => {
           conversationId.current = meta.conversationId
@@ -169,6 +150,8 @@ export default function ChatClient(props: {
           usingOwnKeys={props.usingOwnKeys}
           makeImage={makeImage}
           onMakeImage={setMakeImage}
+          searchWeb={searchWeb}
+          onSearchWeb={setSearchWeb}
         />
 
         <div className="composer-box">

@@ -6,6 +6,7 @@ import { contextCharBudget } from '@/lib/context-budget'
 import { appendMessage, createConversation } from '@/lib/conversations'
 import { pickableModels } from '@/lib/models'
 import { asContextMessage, readPage } from '@/lib/page-context'
+import { SEARCH_MODEL, canSearch, readLinkedPages } from '@/lib/web-context'
 import { loadSavings } from '@/lib/savings'
 import { type Session, loadSession } from '@/lib/session'
 import { type TabChat, savePendingAnswer } from '@/lib/tabs'
@@ -77,6 +78,12 @@ export function useSend(deps: SendDeps): () => Promise<void> {
       deps.setAttached(null)
     }
 
+    // No model can browse. A pasted link is read by the site and handed over as
+    // material; a request to search goes to the one model that can.
+    const web = await readLinkedPages(session, content)
+    if (web.message !== null) history.unshift({ role: 'system', content: web.message })
+    const searching = chat.searchWeb && canSearch(session)
+
     let conversationId = chat.conversationId
     if (conversationId === null) {
       conversationId = await createConversation(session, content).catch(() => null)
@@ -93,7 +100,7 @@ export function useSend(deps: SendDeps): () => Promise<void> {
     for await (const event of streamChat(
       session,
       history,
-      chat.model,
+      searching ? SEARCH_MODEL : chat.model,
       chat.responseMode,
       new AbortController().signal,
     )) {

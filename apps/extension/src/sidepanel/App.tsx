@@ -2,6 +2,7 @@ import type { Savings } from '@zca/pricing'
 import { useEffect, useRef, useState } from 'react'
 import { usesOwnKeys } from '@/lib/chat'
 import { pickableModels } from '@/lib/models'
+import { canSearch } from '@/lib/web-context'
 import type { PageMode } from '@/lib/page-context'
 import { hasPageAccess, isReadable, requestPageAccess } from '@/lib/permissions'
 import { loadSavings } from '@/lib/savings'
@@ -151,6 +152,9 @@ export default function App() {
         models={pickableModels(session)}
         model={chat.model}
         onModel={(model) => patchChat({ model })}
+        searchWeb={chat.searchWeb}
+        onSearchWeb={(searchWeb) => patchChat({ searchWeb })}
+        canSearch={canSearch(session)}
         responseMode={chat.responseMode}
         onResponseMode={(responseMode) => patchChat({ responseMode })}
         showModelPicker={ownKeys}

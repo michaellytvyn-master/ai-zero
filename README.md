@@ -162,6 +162,25 @@ Groq's terms explicitly permit serving end users through your own application
 and forbid transferring keys to them; Cloudflare's do not restrict it. Demo
 mode is the former; it is never the latter.
 
+## Reading the web
+
+No model can browse, so there are two separate answers.
+
+**Paste a link** into any message and the server fetches it, extracts the
+readable text and hands it to whichever model is answering. Works with every
+model. The reply lists the pages it read, failures included.
+
+**Tick "search the web"** and the turn goes to `groq/compound`, which searches
+server-side on the same free tier — which is why this needed no search provider
+and no extra key. It stays off on the shared pool, because it costs more than a
+plain answer and has a lower daily ceiling.
+
+Fetching a user-supplied URL is a request forgery primitive, so the fetcher
+refuses loopback, private, link-local, CGNAT, multicast and reserved addresses
+in both IPv4 and IPv6, sees through `::ffff:` mapping, and re-checks **every
+redirect hop** rather than only the address that was typed. There are tests for
+each of those, including the cloud metadata endpoint.
+
 ## Images
 
 Ask for a picture with the toggle above the composer. Generation runs on
