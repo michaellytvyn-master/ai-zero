@@ -669,3 +669,33 @@ It is the same conditional upsert the demo cap uses, because a burst is exactly
 what a runaway client sends and a read-then-write check would let two requests
 take the last slot. Forty simultaneous claims against a limit of ten leave
 exactly ten, and there is a test that says so.
+
+## 36. The product is software over the user's own accounts, and says so
+
+The old copy read "Chat that runs on free provider tiers — 12 models across 2
+providers, none of which asks for a credit card". That describes a service
+supplying model access, which is the one thing Groq's terms forbid: §3.2 says a
+customer "may not resell or lease access to its Account", and §6.3(c) forbids
+selling, sublicensing or distributing the Cloud Services. What is permitted is
+§3.1 — making them available to End Users through your own application.
+
+The code always did the permitted thing. The copy described the forbidden one.
+
+Everything user-facing now leads with the actual arrangement: the user registers
+with the providers, the keys and quota are theirs, and this is the interface.
+`/` says "Your keys. One interface." and carries a section titled "What this is,
+and what it is not". `/privacy` opens by stating that this service does not run
+models. `/terms` is new and says it outright. The store listing's first line is
+now "This extension does not provide access to AI models and does not resell
+it."
+
+**One boundary has to stay sharp.** The daily trial is the only place the
+operator's keys run, which §3.1 covers as End Users through an application. If
+this ever charges money, the trial must remain outside every paid plan — the
+moment somebody has paid for an allowance served by the operator's keys, that is
+selling access to the operator's account, and §3.2 applies. Both `/terms` and
+the store listing state that the trial is not part of any plan.
+
+This is positioning, not billing. SPEC.md §2 still says "No paid tier, no
+billing", and no payment code exists. The copy is simply now compatible with
+adding one without having to be rewritten to stay lawful.

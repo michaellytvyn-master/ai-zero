@@ -1,11 +1,20 @@
 # Zero-Cost AI Assistant
 
-A personal AI assistant that runs on the free tiers of several LLM providers,
-failing over automatically when one is rate limited or down.
+Software over language model accounts the user already owns. It provides no
+model access and resells none: you register with the providers yourself, the
+keys and the quota are yours, and this is the router, the chat, the browser
+extension and the API on top of them.
 
 Three surfaces over one core: an OpenAI-compatible router, a Chrome side-panel
-extension, and a Next.js web app with a capped public demo and an admin
-dashboard.
+extension, and a Next.js web app with an admin dashboard and a small trial
+allowance on the operator's keys for people who have not registered anywhere
+yet.
+
+That distinction is load-bearing rather than cosmetic. Groq's Services Agreement
+permits making its service available to End Users through your own application
+(§3.1) and forbids reselling or leasing account access (§3.2, §6.3(c)). The code
+always did the former; as of 2026-09-09 the copy says so too. See
+[DECISIONS.md](DECISIONS.md) §36.
 
 The brief is [SPEC.md](SPEC.md). Where the build departs from it, and why, is
 [DECISIONS.md](DECISIONS.md) — read that before being surprised by anything.

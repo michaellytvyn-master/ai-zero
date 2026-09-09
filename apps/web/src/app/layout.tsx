@@ -25,6 +25,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <Link href="/privacy" className="muted">
             Privacy
           </Link>
+          <Link href="/terms" className="muted">
+            Terms
+          </Link>
           {email === null ? (
             <>
               <Link href="/signin">Sign in</Link>

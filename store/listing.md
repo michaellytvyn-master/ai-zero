@@ -9,42 +9,44 @@ Zero-Cost AI
 
 ## Short description (132 characters max)
 
-> Chat with AI on free provider tiers. Falls over to another provider when one
-> is rate limited, and shows what you would have paid.
+> One interface for the AI accounts you already own. Connect your own free API
+> keys and use them anywhere.
 
-(126 characters.)
+(122 characters.)
 
 ## Single purpose
 
-> Provide a chat assistant in the browser side panel that runs on the free
-> tiers of several large language model providers, failing over between them
-> automatically.
+> Provide a browser side panel that lets a user chat through their own language
+> model API keys, routing between the providers they have connected and failing
+> over when one is unavailable.
 
 ## Detailed description
 
-> Zero-Cost AI is a chat assistant that runs on the free tiers of several
-> providers instead of a paid subscription.
+> This extension does not provide access to AI models and does not resell it.
+> You register with Groq and Cloudflare yourself — both are free and neither
+> asks for a credit card — and this is the software that makes those accounts
+> usable in a browser.
 >
-> Ask a question in the side panel and the request goes to whichever provider
-> is available. If one is rate limited or down, the next one answers, and the
-> panel tells you which provider it was. You can dictate instead of typing —
-> speech is transcribed by Whisper on the same free tier. It can read the page
-> you are on, as
-> readable text or as HTML source, so you can ask about what is in front of
-> you, and selecting text anywhere lets you quote just that.
+> Paste your keys in once on the website. From then on the side panel answers on
+> your own quota: pick from the models your keys unlock, switch model mid
+> conversation, and when one provider is rate limited the next one answers and
+> the panel tells you which.
 >
-> Add your own free API keys and requests go straight from your browser to the
-> provider, so nothing passes through our servers, and it keeps working even
-> when they are down. Without your own keys you get a small number of messages
-> a day from a shared pool.
+> Each tab keeps its own chat. Open the panel on a tab and it stays there;
+> switch tabs and it does not follow you. It can read the page you are on, as
+> text or as HTML source, so you can ask about what is in front of you, and
+> selecting text lets you quote just that. You can dictate instead of typing.
+>
+> Conversations are stored on your account, so the same chat is on the website
+> and in every browser you sign in from.
 >
 > A counter shows what the same usage would have cost on a paid model. It is an
-> estimate against published prices, not a bill, and it deliberately compares
-> against an inexpensive model rather than a flagship.
+> estimate against published prices, measured deliberately against an
+> inexpensive model rather than a flagship.
 >
-> An account on the website is required. Conversations are saved there so you
-> can pick them up on another device, and keys you add are encrypted before
-> they are stored.
+> New accounts get a small daily allowance on the operator's keys, so you can
+> see whether it is worth registering with a provider at all. It is limited to
+> the smallest model and is not part of any paid plan.
 >
 > Open source, MIT licensed.
 
@@ -88,8 +90,8 @@ fails the build if a broad pattern is ever moved into `host_permissions`.
 
 Answer the dashboard's data-use form as follows, because all of it is true:
 
-- **Personally identifiable information** — collected. The email address of the
-  Google account used to sign in, for authentication.
+- **Personally identifiable information** — collected. The email address used to
+  sign in, for authentication.
 - **Authentication information** — collected. Provider API keys the user
   chooses to add, encrypted at rest.
 - **User activity** — collected. Which provider answered, the model, token
