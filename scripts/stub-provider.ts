@@ -31,6 +31,20 @@ for (const stub of stubs) {
       })
     }
 
+    // The catalogue endpoint, so the live context-window lookup can be exercised.
+    if ((req.url ?? '').endsWith('/models')) {
+      res.writeHead(200, { 'content-type': 'application/json' })
+      res.end(
+        JSON.stringify({
+          data: [
+            { id: 'openai/gpt-oss-120b', context_window: 196608, active: true },
+            { id: 'a-paid-model-not-in-the-registry', context_window: 1000000, active: true },
+          ],
+        }),
+      )
+      return
+    }
+
     // Whisper is a plain JSON endpoint, not a stream, so it answers separately.
     if ((req.url ?? '').includes('/audio/transcriptions')) {
       res.writeHead(200, { 'content-type': 'application/json' })

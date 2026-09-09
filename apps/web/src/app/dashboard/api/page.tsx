@@ -1,4 +1,4 @@
-import { qualifiedModelIds } from '@zca/providers'
+import { modelCatalogue } from '@/lib/model-catalogue'
 import { redirect } from 'next/navigation'
 import { safeAuth } from '@/auth'
 import ApiKeysClient from '@/components/api-keys-client'
@@ -11,7 +11,7 @@ export default async function ApiPage() {
   const userId = session?.user?.id
   if (typeof userId !== 'string') redirect('/signin')
 
-  const keys = await listApiKeys(userId)
+  const [keys, models] = await Promise.all([listApiKeys(userId), modelCatalogue()])
 
   return (
     <>
@@ -52,9 +52,9 @@ export default async function ApiPage() {
         <code>GET /api/v1/models</code> for this list at runtime.
       </p>
       <ul className="muted">
-        {qualifiedModelIds().map((id) => (
-          <li key={id}>
-            <code>{id}</code>
+        {models.map((model) => (
+          <li key={model.id}>
+            <code>{model.id}</code> — {Math.round(model.contextWindow / 1000)}k context
           </li>
         ))}
       </ul>

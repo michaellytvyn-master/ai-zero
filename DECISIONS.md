@@ -570,3 +570,27 @@ Three things are deliberate:
 `/api/v1/models` and `/api/health` were built in `router-core` back in phase 1
 and never mounted as routes; the documentation page referenced a 404 until an
 end-to-end check caught it.
+
+## 33. Context windows are read from the provider, not from its documentation
+
+Every model figure in the registry was copied out of a documentation page, which
+is exactly the staleness hard constraint 4 warns about — and a question about
+one of them was what surfaced it.
+
+Providers publishing an OpenAI-style `/models` endpoint are now asked directly.
+Groq returns `context_window` and `max_completion_tokens` per model; the answer
+wins, cached in memory for an hour because this is metadata about a dozen
+models, not per-user state. The recorded numbers remain as the fallback for
+providers with no such endpoint, and as the record of what was true when
+checked.
+
+**The merge enriches; it never extends.** A provider's catalogue lists
+everything a key can reach, including models that need a payment method. The
+registry is the list that is free, and `registry.test.ts` asserts that. So live
+data may correct a figure on a model already shipped and may not introduce a
+new one. There is a test for that too, because getting it wrong would quietly
+undo the project's premise.
+
+For the record, since the two get conflated: Groq's gpt-oss models have a
+131 072-token **context window** and the free tier allows 200 000 **tokens per
+day**. Different things. Nothing on Groq has a 200k window.

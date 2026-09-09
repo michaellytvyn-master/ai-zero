@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { listModels } from '@zca/providers'
+import { modelCatalogue } from '@/lib/model-catalogue'
 import { safeAuth } from '@/auth'
 import ChatClient from '@/components/chat-client'
 import { listConversations, loadConversation } from '@/lib/conversations'
@@ -40,7 +40,7 @@ export default async function ChatPage({
       }))}
       nextCursor={conversations.nextCursor}
       activeId={active?.summary.id ?? null}
-      models={[...listModels()]}
+      models={await modelCatalogue()}
       initialModel={
         lastAnswer === undefined ? 'auto' : `${lastAnswer.providerId}:${lastAnswer.model}`
       }

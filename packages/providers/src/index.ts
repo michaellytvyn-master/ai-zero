@@ -5,6 +5,7 @@ export * from './openai-compatible'
 export { sseData } from './sse'
 export * from './transcription'
 export * from './images'
+export * from './catalogue'
 export {
   groq,
   createGroq,

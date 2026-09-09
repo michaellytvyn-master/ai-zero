@@ -6,6 +6,18 @@ checked, when, and against what. Re-check before touching an adapter.
 
 **Last verified: 2026-09-08.**
 
+Context windows are no longer only what is written here. Providers publishing an
+OpenAI-style `/models` endpoint are asked at runtime and their answer wins; the
+figures below are the fallback and the record of what was true when checked.
+See `packages/providers/src/catalogue.ts`.
+
+**Two numbers are easy to confuse.** A *context window* is how much fits in one
+request — 131 072 tokens for Groq's gpt-oss models. *TPD* is how many tokens the
+free tier allows per day — 200 000 on Groq. They are unrelated, and 200 000 is
+not a context size. No model on Groq has a 200k window; the largest is
+`minimax/minimax-m2.7` at 196 608, which is a preview model and absent from the
+free-plan table.
+
 ## The rule this registry follows
 
 **A provider that needs a credit card does not ship.** The project's premise is
