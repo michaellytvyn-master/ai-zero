@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { ChatChunk } from '@zca/shared'
 import { MAX_AGENT_STEPS } from './actions'
-import { type AgentEvent, type AgentIO, runAgent, typedOutcome } from './agent'
+import { type AgentEvent, type AgentIO, runAgent, typedOutcome, where } from './agent'
 
 const PAGE = [
   { ref: 0, tag: 'a', name: 'Home', inForm: false, editable: false },
@@ -18,6 +18,15 @@ const PAGE = [
     options: ['Choose', 'Poland', 'Ukraine'],
   },
   { ref: 5, tag: 'input', type: 'email', name: 'Email', inForm: true, editable: true },
+  { ref: 6, tag: 'input', type: 'search', name: 'Search', inForm: true, editable: true },
+  {
+    ref: 7,
+    tag: 'a',
+    name: 'Docs',
+    inForm: false,
+    editable: false,
+    href: 'https://example.test/docs',
+  },
 ]
 
 /** A model that says exactly what the test tells it to, turn by turn. */
@@ -44,6 +53,11 @@ function io(turns: ChatChunk[][], over: Partial<AgentIO> = {}): AgentIO {
     click: vi.fn(async () => true),
     type: vi.fn(async (_ref: number, text: string) => text),
     select: vi.fn(async (_ref: number, option: string) => option),
+    pressKey: vi.fn(async () => 'pressed'),
+    navigate: vi.fn(async () => {}),
+    back: vi.fn(async () => true),
+    readText: vi.fn(async () => '```\nThe page says hello.\n```'),
+    settle: vi.fn(async () => 'https://example.test/page?token=secret'),
     scroll: vi.fn(async () => true),
     confirm: vi.fn(async () => true),
     think: scripted(turns),
@@ -179,6 +193,93 @@ describe('runAgent', () => {
     expect(events).toContainEqual(
       expect.objectContaining({ kind: 'refused', because: expect.stringContaining('select') }),
     )
+  })
+})
+
+describe('runAgent — using the browser', () => {
+  it('opens a link the page offers without asking', async () => {
+    const deps = io([[call('navigate', { url: 'https://example.test/docs' })], [text('Here.')]])
+    await collect(runAgent(deps, 'open the docs'))
+    expect(deps.confirm).not.toHaveBeenCalled()
+    expect(deps.navigate).toHaveBeenCalledWith('https://example.test/docs')
+  })
+
+  it('asks before an address the model made up, and does not go if refused', async () => {
+    const confirm = vi.fn(async () => false)
+    const deps = io(
+      [[call('navigate', { url: 'https://elsewhere.example/?d=secret' })], [text('OK.')]],
+      { confirm },
+    )
+    const events = await collect(runAgent(deps, 'summarise this page'))
+    expect(confirm).toHaveBeenCalledOnce()
+    expect(deps.navigate).not.toHaveBeenCalled()
+    expect(events).toContainEqual(expect.objectContaining({ kind: 'declined' }))
+  })
+
+  it('never opens a javascript: address, not even with permission', async () => {
+    const deps = io([[call('navigate', { url: 'javascript:alert(1)' })], [text('No.')]])
+    await collect(runAgent(deps, 'javascript:alert(1)'))
+    expect(deps.confirm).not.toHaveBeenCalled()
+    expect(deps.navigate).not.toHaveBeenCalled()
+  })
+
+  it('searches with Enter on a search box without asking', async () => {
+    const deps = io([[call('press_key', { key: 'Enter', ref: 6 })], [text('Done.')]])
+    await collect(runAgent(deps, 'search'))
+    expect(deps.confirm).not.toHaveBeenCalled()
+    expect(deps.pressKey).toHaveBeenCalledWith('Enter', 6)
+  })
+
+  it('asks before Enter in a field that may submit, and holds back on no', async () => {
+    const confirm = vi.fn(async () => false)
+    const deps = io([[call('press_key', { key: 'Enter', ref: 5 })], [text('OK.')]], { confirm })
+    await collect(runAgent(deps, 'submit'))
+    expect(confirm).toHaveBeenCalledOnce()
+    expect(deps.pressKey).not.toHaveBeenCalled()
+  })
+
+  it('waits for any load before reading the page again, every step', async () => {
+    const deps = io([[call('click', { ref: 7 })], [text('Done.')]])
+    await collect(runAgent(deps, 'open docs'))
+    expect(deps.settle).toHaveBeenCalledTimes(2)
+  })
+
+  it('carries on when a page cannot be read, rather than ending the task', async () => {
+    const index = vi.fn(async () => {
+      throw new Error('Cannot access a chrome:// URL')
+    })
+    const deps = io([[call('go_back', {})], [text('Back again.')]], { index })
+    const events = await collect(runAgent(deps, 'go back'))
+    expect(deps.back).toHaveBeenCalledOnce()
+    expect(events.at(-1)).toEqual({ kind: 'done', reason: 'answered' })
+  })
+
+  it('never shows the model the query string, where tokens live', async () => {
+    const seen: string[] = []
+    const think: AgentIO['think'] = async function* (messages) {
+      seen.push(...messages.map((message) => message.content))
+      yield text('Done.')
+    }
+    await collect(runAgent(io([], { think }), 'where am I'))
+    const bearings = seen.find((content) => content.startsWith('You are on'))
+    expect(bearings).toContain('https://example.test/page')
+    expect(bearings).not.toContain('token=secret')
+  })
+
+  it('reads the page text when asked', async () => {
+    const deps = io([[call('read_text', {})], [text('It says hello.')]])
+    await collect(runAgent(deps, 'what does it say'))
+    expect(deps.readText).toHaveBeenCalledOnce()
+  })
+})
+
+describe('where', () => {
+  it('keeps origin and path, and drops the query and fragment', () => {
+    expect(where('https://mail.example/reset?token=abc#x')).toBe('https://mail.example/reset')
+  })
+
+  it('does not throw on something that is not an address', () => {
+    expect(where('')).toBe('an unknown page')
   })
 })
 

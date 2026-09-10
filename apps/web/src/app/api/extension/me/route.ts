@@ -1,5 +1,5 @@
 import { orderedProviders } from '@zca/providers'
-import { resolveUser } from '@/lib/request-user'
+import { extensionTokenUser } from '@/lib/extension-auth'
 import { decryptedKeys } from '@/lib/provider-keys'
 import { unauthenticatedResponse } from '@/lib/responses'
 import { demoRemaining } from '@/lib/usage'
@@ -14,7 +14,9 @@ export const dynamic = 'force-dynamic'
  * a token only ever unlocks the keys of the user it belongs to.
  */
 export async function GET(request: Request): Promise<Response> {
-  const user = await resolveUser(request)
+  // Extension tokens only. This is the endpoint that returns keys in the
+  // clear, so neither an API key nor a site cookie may reach it.
+  const user = await extensionTokenUser(request)
   if (user === null) return unauthenticatedResponse()
 
   const keys = await decryptedKeys(user.id)

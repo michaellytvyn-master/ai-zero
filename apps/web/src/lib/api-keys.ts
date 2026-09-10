@@ -4,7 +4,8 @@ import { db } from '../db'
 import { apiKeys, users } from '../db/schema'
 
 /** Recognisable in logs and search, and distinct from a provider's own keys. */
-const PREFIX = 'zca_'
+export const API_KEY_PREFIX = 'zca_'
+const PREFIX = API_KEY_PREFIX
 
 export interface ApiKeyRow {
   readonly id: string

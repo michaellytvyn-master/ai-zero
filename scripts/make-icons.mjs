@@ -8,8 +8,11 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { deflateSync } from 'node:zlib'
 
 const SUPERSAMPLE = 4
-const BACKGROUND = [47, 91, 215]
-const FOREGROUND = [255, 255, 255]
+// The product's own palette: the neon accent on near-black, as in globals.css.
+// The bolt carries the mark; on a dark toolbar the square recedes and the bolt
+// still reads, on a light one the square frames it.
+const BACKGROUND = [9, 12, 11]
+const FOREGROUND = [33, 229, 138]
 
 /** Normalised bolt, clockwise from the top point. */
 const BOLT = [
@@ -42,19 +45,28 @@ function insidePolygon(px, py, polygon) {
   return inside
 }
 
-function render(size) {
+/**
+ * `artwork` is the drawn mark's size inside a `size` canvas; the rest stays
+ * transparent. The store wants its 128px icon as 96px of artwork with 16px of
+ * padding on each side, so it sits in line with every other listing.
+ * https://developer.chrome.com/docs/webstore/images
+ */
+function render(size, artwork = size) {
   const big = size * SUPERSAMPLE
+  const art = artwork * SUPERSAMPLE
+  const inset = (big - art) / 2
   const samples = new Float64Array(big * big * 4)
 
   for (let y = 0; y < big; y += 1) {
     for (let x = 0; x < big; x += 1) {
-      const px = x + 0.5
-      const py = y + 0.5
+      const px = x + 0.5 - inset
+      const py = y + 0.5 - inset
       const offset = (y * big + x) * 4
 
-      if (roundedSquareAlpha(px, py, big) === 0) continue
+      if (px < 0 || py < 0 || px > art || py > art) continue
+      if (roundedSquareAlpha(px, py, art) === 0) continue
 
-      const onBolt = insidePolygon(px / big, py / big, BOLT)
+      const onBolt = insidePolygon(px / art, py / art, BOLT)
       const [r, g, b] = onBolt ? FOREGROUND : BACKGROUND
       samples[offset] = r
       samples[offset + 1] = g
@@ -113,7 +125,7 @@ function chunk(type, data) {
   return Buffer.concat([length, body, checksum])
 }
 
-function png(size) {
+function png(size, artwork = size) {
   const header = Buffer.alloc(13)
   header.writeUInt32BE(size, 0)
   header.writeUInt32BE(size, 4)
@@ -122,15 +134,22 @@ function png(size) {
   return Buffer.concat([
     Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
     chunk('IHDR', header),
-    chunk('IDAT', deflateSync(render(size), { level: 9 })),
+    chunk('IDAT', deflateSync(render(size, artwork), { level: 9 })),
     chunk('IEND', Buffer.alloc(0)),
   ])
 }
 
 const outDir = new URL('../apps/extension/public/icons/', import.meta.url)
 mkdirSync(outDir, { recursive: true })
+// The small sizes stay full-bleed: at 16px every pixel is needed for the mark.
+// 128 is the one the store and chrome://extensions show large, and it must show
+// 96px of artwork with 16px either side. The rounded square keeps its own 4.5%
+// inset, so the box it is drawn in is 96 / 0.91 — measured, not assumed: a box
+// of 96 left a visible square of 88.
+const ARTWORK = { 128: 96 / (1 - 2 * 0.045) }
 for (const size of [16, 32, 48, 128, 256]) {
   const file = new URL(`${size}.png`, outDir)
-  writeFileSync(file, png(size))
-  console.log(`${size}x${size}`.padEnd(9), `${(png(size).length / 1024).toFixed(1)} kB`)
+  const bytes = png(size, ARTWORK[size] ?? size)
+  writeFileSync(file, bytes)
+  console.log(`${size}x${size}`.padEnd(9), `${(bytes.length / 1024).toFixed(1)} kB`)
 }

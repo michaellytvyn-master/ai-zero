@@ -5,6 +5,8 @@ import {
   type ElementDescriptor,
   MAX_AGENT_STEPS,
   classifyClick,
+  classifyKey,
+  classifyNavigate,
   classifySelect,
   classifyType,
   describePage,
@@ -24,6 +26,14 @@ export interface AgentIO {
   /** Resolves to the option actually chosen, or null if none matched. */
   select(ref: number, option: string): Promise<string | null>
   scroll(direction: 'up' | 'down'): Promise<boolean>
+  /** What happened: 'submitted', 'handled', 'pressed' or 'missing'. */
+  pressKey(key: string, ref: number | null): Promise<string>
+  navigate(url: string): Promise<void>
+  back(): Promise<boolean>
+  /** The page's text, fenced and labelled as material rather than instruction. */
+  readText(): Promise<string>
+  /** Waits for any load an action started; resolves to the tab's address. */
+  settle(): Promise<string>
   /** The confirmation gate. Resolves true only if the person said yes. */
   confirm(question: string): Promise<boolean>
   think(messages: readonly ChatMessage[]): AsyncIterable<ChatChunk>
@@ -41,6 +51,8 @@ interface Parsed {
   readonly ref?: number
   readonly text?: string
   readonly option?: string
+  readonly key?: string
+  readonly url?: string
   readonly direction?: 'up' | 'down'
 }
 
@@ -66,11 +78,24 @@ export async function* runAgent(
   for (let step = 1; step <= MAX_AGENT_STEPS; step++) {
     yield { kind: 'step', n: step }
 
-    const elements = await io.index()
-    messages.push({
-      role: 'user',
-      content: `The page now offers these elements:\n${describePage(elements)}`,
-    })
+    // An action may have started a navigation; reading mid-load reads the old
+    // document as it is torn down.
+    const address = where(await io.settle())
+    let elements: ElementDescriptor[] = []
+    try {
+      elements = await io.index()
+      messages.push({
+        role: 'user',
+        content: `You are on ${address}. The page offers these elements:\n${describePage(elements)}`,
+      })
+    } catch {
+      // Browser pages, the extension store and PDF viewers cannot be scripted.
+      // Say so, and let the model go back or answer, rather than ending here.
+      messages.push({
+        role: 'user',
+        content: `You are on ${address}, which this extension cannot read or act on. Go back, open another address the user gave, or answer.`,
+      })
+    }
 
     let said = ''
     const calls: { id: string; name: string; args: string }[] = []
@@ -92,7 +117,7 @@ export async function* runAgent(
     messages.push({ role: 'assistant', content: said, toolCalls: calls })
 
     for (const call of calls) {
-      const outcome = await perform(io, call, elements)
+      const outcome = await perform(io, call, elements, goal)
       for (const event of outcome.events) yield event
       messages.push({ role: 'tool', content: outcome.result, toolCallId: call.id })
     }
@@ -106,10 +131,24 @@ interface Outcome {
   readonly events: AgentEvent[]
 }
 
+/**
+ * Where the tab is, for the model's bearings — without the query string, which
+ * is where session tokens, reset links and OAuth codes live.
+ */
+export function where(address: string): string {
+  try {
+    const url = new URL(address)
+    return `${url.origin}${url.pathname}`
+  } catch {
+    return 'an unknown page'
+  }
+}
+
 async function perform(
   io: AgentIO,
   call: { id: string; name: string; args: string },
   elements: readonly ElementDescriptor[],
+  goal: string,
 ): Promise<Outcome> {
   const args = parseArgs(call.args)
   if (args === null) {
@@ -128,6 +167,74 @@ async function perform(
   if (call.name === 'read_page') {
     // The loop re-reads before every step anyway; this just ends the turn.
     return { result: 'The page will be read again before the next step.', events: [] }
+  }
+
+  if (call.name === 'read_text') {
+    try {
+      return { result: await io.readText(), events: [{ kind: 'acted', what: 'read the page' }] }
+    } catch {
+      return { result: 'This page’s text could not be read.', events: [] }
+    }
+  }
+
+  if (call.name === 'go_back') {
+    const went = await io.back()
+    return {
+      result: went ? 'Went back.' : 'There is no earlier page in this tab.',
+      events: went ? [{ kind: 'acted', what: 'go back' }] : [],
+    }
+  }
+
+  if (call.name === 'navigate') {
+    const url = args.url ?? ''
+    const links = elements.flatMap((element) => (element.href === undefined ? [] : [element.href]))
+    const verdict = classifyNavigate(url, links, goal)
+    const what = `open ${url}`
+    if (verdict.kind === 'refuse') {
+      return {
+        result: `Refused: ${verdict.because}`,
+        events: [{ kind: 'refused', what, because: verdict.because }],
+      }
+    }
+    if (verdict.kind === 'confirm' && !(await io.confirm(verdict.because))) {
+      return {
+        result: 'The user declined to open that address.',
+        events: [{ kind: 'declined', what }],
+      }
+    }
+    await io.navigate(url.includes('://') ? url : `https://${url}`)
+    return { result: `Opening ${url}.`, events: [{ kind: 'acted', what }] }
+  }
+
+  if (call.name === 'press_key') {
+    const key = args.key ?? ''
+    const target = args.ref === undefined ? undefined : elements.find((e) => e.ref === args.ref)
+    if (args.ref !== undefined && target === undefined) {
+      return { result: `There is no element ${String(args.ref)} on this page.`, events: [] }
+    }
+    const verdict = classifyKey(key, target)
+    const what =
+      target === undefined ? `press ${key}` : `press ${key} on [${target.ref}] "${target.name}"`
+    if (verdict.kind === 'refuse') {
+      return {
+        result: `Refused: ${verdict.because}`,
+        events: [{ kind: 'refused', what, because: verdict.because }],
+      }
+    }
+    if (verdict.kind === 'confirm' && !(await io.confirm(`${what} — ${verdict.because}`))) {
+      return { result: 'The user declined that action.', events: [{ kind: 'declined', what }] }
+    }
+    const happened = await io.pressKey(key, target?.ref ?? null)
+    if (happened === 'missing') {
+      return { result: 'Nothing was focused to press it on.', events: [] }
+    }
+    const note =
+      happened === 'submitted'
+        ? 'The form was submitted.'
+        : happened === 'handled'
+          ? 'The page responded to it.'
+          : 'Pressed.'
+    return { result: note, events: [{ kind: 'acted', what }] }
   }
 
   const element = elements.find((candidate) => candidate.ref === args.ref)
@@ -233,6 +340,8 @@ function parseArgs(raw: string): Parsed | null {
       ...(typeof parsed.ref === 'number' ? { ref: parsed.ref } : {}),
       ...(typeof parsed.text === 'string' ? { text: parsed.text } : {}),
       ...(typeof parsed.option === 'string' ? { option: parsed.option } : {}),
+      ...(typeof parsed.key === 'string' ? { key: parsed.key } : {}),
+      ...(typeof parsed.url === 'string' ? { url: parsed.url } : {}),
       ...(parsed.direction === 'up' || parsed.direction === 'down'
         ? { direction: parsed.direction }
         : {}),

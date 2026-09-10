@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { safeAuth } from '@/auth'
-import { issueExtensionToken } from '@/lib/extension-auth'
+import { extensionAllowed, extensionIdFrom, issueExtensionToken } from '@/lib/extension-auth'
 
 export const metadata: Metadata = {
   title: 'Authorize the extension',
@@ -12,22 +12,17 @@ export const metadata: Metadata = {
 
 export const dynamic = 'force-dynamic'
 
-/**
- * chrome.identity.launchWebAuthFlow finishes when the browser reaches a URL
- * under the extension's own chromiumapp.org origin. Anything else would turn
- * this page into an open redirect that leaks a bearer token, so the shape is
- * checked rather than trusted: extension ids are exactly 32 letters a-p.
- */
-const REDIRECT_PATTERN = /^https:\/\/[a-p]{32}\.chromiumapp\.org\/?$/
-
 export default async function AuthorizeExtensionPage({
   searchParams,
 }: {
   searchParams: Promise<{ redirect_uri?: string; state?: string }>
 }) {
   const { redirect_uri: redirectUri, state } = await searchParams
+  const extensionId = extensionIdFrom(redirectUri)
 
-  if (redirectUri === undefined || !REDIRECT_PATTERN.test(redirectUri)) {
+  // The same answer for a malformed address and an extension not on the list,
+  // so the page cannot be used to learn which ids are allowed.
+  if (extensionId === null || !extensionAllowed(extensionId)) {
     return (
       <main className="wrap">
         <h1>Invalid request</h1>
@@ -39,17 +34,21 @@ export default async function AuthorizeExtensionPage({
     )
   }
 
+  // Rebuilt from the validated id rather than echoing what was sent, so the
+  // token can only ever go to that extension's own origin.
+  const returnTo = `https://${extensionId}.chromiumapp.org/`
+
   const session = await safeAuth()
   const userId = session?.user?.id
   if (typeof userId !== 'string') {
-    const target = `/extension/authorize?redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(state ?? '')}`
+    const target = `/extension/authorize?redirect_uri=${encodeURIComponent(returnTo)}&state=${encodeURIComponent(state ?? '')}`
     redirect(`/signin?callbackUrl=${encodeURIComponent(target)}`)
   }
 
   async function approve() {
     'use server'
     const token = await issueExtensionToken(userId as string)
-    const destination = new URL(redirectUri as string)
+    const destination = new URL(returnTo)
     destination.searchParams.set('token', token)
     if (state !== undefined) destination.searchParams.set('state', state)
     redirect(destination.toString())
@@ -70,6 +69,11 @@ export default async function AuthorizeExtensionPage({
         </ul>
         <p className="muted" style={{ fontSize: 13 }}>
           You can revoke this from the extension&apos;s settings at any time.
+        </p>
+        <p className="muted" style={{ fontSize: 13, marginBottom: 0 }}>
+          Asking extension: <code>{extensionId}</code>. It should match the ID shown for Zero-Cost
+          AI at <code>chrome://extensions</code>. If it does not, another extension opened this page
+          — do not allow it.
         </p>
       </div>
       <form action={approve}>

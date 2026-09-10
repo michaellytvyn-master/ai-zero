@@ -46,6 +46,47 @@ export async function typeRef(tabId: number, ref: number, text: string): Promise
   return typeof result?.result === 'string' ? result.result : null
 }
 
+/** What happened: 'submitted', 'handled' by the page, 'pressed', or 'missing'. */
+export async function pressKey(tabId: number, key: string, ref: number | null): Promise<string> {
+  const [result] = await chrome.scripting.executeScript({
+    target: { tabId },
+    func: doPressKey,
+    args: [ref, key],
+  })
+  return typeof result?.result === 'string' ? result.result : 'missing'
+}
+
+export async function navigateTab(tabId: number, url: string): Promise<void> {
+  await chrome.tabs.update(tabId, { url })
+}
+
+export async function goBackTab(tabId: number): Promise<boolean> {
+  try {
+    await chrome.tabs.goBack(tabId)
+    return true
+  } catch {
+    // No history to go back to.
+    return false
+  }
+}
+
+/**
+ * Waits for the tab to finish loading before the page is read again. An action
+ * may have started a navigation, and indexing mid-load reads the old document
+ * as it is torn down, or nothing at all. A page that routes on the client never
+ * reports "loading", so there is a short pause after it says complete.
+ */
+export async function waitForSettled(tabId: number, timeoutMs = 10_000): Promise<string> {
+  const started = Date.now()
+  let tab = await chrome.tabs.get(tabId)
+  while (tab.status !== 'complete' && Date.now() - started < timeoutMs) {
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    tab = await chrome.tabs.get(tabId)
+  }
+  await new Promise((resolve) => setTimeout(resolve, 400))
+  return tab.url ?? ''
+}
+
 /** Returns the text of the option actually chosen, or null if none matched. */
 export async function selectRef(
   tabId: number,
@@ -205,6 +246,9 @@ function collect(limit: number): unknown[] {
       value = clean(element.textContent).slice(0, 60)
     }
 
+    // Absolute, so it can be compared with an address the model asks to open.
+    const href = tag === 'a' ? (element as HTMLAnchorElement).href : undefined
+
     element.setAttribute('data-zca-ref', String(ref))
     out.push({
       ref,
@@ -217,6 +261,7 @@ function collect(limit: number): unknown[] {
       ...(value === undefined ? {} : { value }),
       ...(options === undefined ? {} : { options }),
       ...(checked === undefined ? {} : { checked }),
+      ...(href === undefined || href === '' ? {} : { href }),
     })
     ref += 1
   }
@@ -225,10 +270,19 @@ function collect(limit: number): unknown[] {
 }
 
 function doClick(ref: number): boolean {
-  const target = document.querySelector(`[data-zca-ref="${ref}"]`)
+  const target = document.querySelector(`[data-zca-ref="${ref}"]`) as HTMLElement | null
   if (target === null) return false
-  ;(target as HTMLElement).scrollIntoView({ block: 'center', behavior: 'instant' })
-  ;(target as HTMLElement).click()
+  target.scrollIntoView({ block: 'center', behavior: 'instant' })
+  // The agent works in one tab. A link that opens another would take the page
+  // it just asked for somewhere it can never see, so it opens here instead.
+  if (
+    target instanceof HTMLAnchorElement &&
+    target.target === '_blank' &&
+    /^https?:/.test(target.href)
+  ) {
+    target.removeAttribute('target')
+  }
+  target.click()
   return true
 }
 
@@ -311,6 +365,33 @@ function doSelect(ref: number, wanted: string): string | null {
   target.dispatchEvent(new Event('input', { bubbles: true }))
   target.dispatchEvent(new Event('change', { bubbles: true }))
   return (chosen.textContent ?? '').replace(/\s+/g, ' ').trim()
+}
+
+async function doPressKey(ref: number | null, key: string): Promise<string> {
+  const target =
+    ref === null
+      ? (document.activeElement as HTMLElement | null)
+      : (document.querySelector(`[data-zca-ref="${ref}"]`) as HTMLElement | null)
+  if (target === null) return 'missing'
+  target.focus()
+
+  const init = { key, code: key, bubbles: true, cancelable: true }
+  const down = new KeyboardEvent('keydown', init)
+  target.dispatchEvent(down)
+  target.dispatchEvent(new KeyboardEvent('keyup', init))
+
+  // A dispatched key reaches the page's own handlers — which is how chat boxes
+  // and most apps respond to Enter — but the browser performs no default
+  // action for it, so a plain form would never submit. Do what Enter would
+  // have done, unless a handler already dealt with it.
+  if (key === 'Enter' && !down.defaultPrevented) {
+    const form = (target as HTMLInputElement).form ?? target.closest('form')
+    if (form !== null && !(target instanceof HTMLTextAreaElement)) {
+      form.requestSubmit()
+      return 'submitted'
+    }
+  }
+  return down.defaultPrevented ? 'handled' : 'pressed'
 }
 
 function doScroll(direction: 'up' | 'down'): boolean {

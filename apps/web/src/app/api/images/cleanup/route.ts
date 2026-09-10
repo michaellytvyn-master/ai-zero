@@ -6,8 +6,10 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 /**
- * Run on a schedule; see vercel.json. Guarded by CRON_SECRET so it cannot be
- * used by anyone else to hammer the storage API.
+ * Run on two schedules: every 15 minutes from .github/workflows/sweep.yml, and
+ * once a day from vercel.json as a backstop — Vercel's free plan allows no more
+ * than daily. Guarded by CRON_SECRET so it cannot be used by anyone else to
+ * hammer the storage API.
  */
 export async function GET(request: Request): Promise<Response> {
   const secret = process.env.CRON_SECRET

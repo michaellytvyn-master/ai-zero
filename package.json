@@ -1,6 +1,20 @@
 {
   "name": "zero-cost-ai",
   "private": true,
+  "description": "One chat, one OpenAI-compatible API and a browser agent — over the free AI accounts you already own.",
+  "license": "MIT",
+  "author": "Michael Lytvyn",
+  "keywords": [
+    "ai",
+    "llm",
+    "byok",
+    "chrome-extension",
+    "nextjs",
+    "openai-compatible",
+    "groq",
+    "gemini",
+    "cloudflare-workers-ai"
+  ],
   "packageManager": "pnpm@9.15.0",
   "engines": {
     "node": ">=22"

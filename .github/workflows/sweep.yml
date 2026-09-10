@@ -1,0 +1,32 @@
+name: Sweep expired images
+
+# Vercel's free plan runs a cron at most once a day, and a more frequent
+# schedule in vercel.json fails the deploy outright. The shared image pool
+# promises an hour, so the frequent sweep runs from here — scheduled workflows
+# cost nothing on a public repository — and the daily Vercel cron in
+# apps/web/vercel.json stays as a backstop in case this one is paused.
+#
+# GitHub disables scheduled workflows on a public repository after 60 days
+# without activity. If the site goes quiet for that long, re-enable this under
+# the Actions tab; the daily backstop keeps running meanwhile.
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    # Forks, and this repository before it is deployed, have nothing to call.
+    if: ${{ vars.SITE_URL != '' }}
+    steps:
+      - name: Call the cleanup endpoint
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 60 \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${SITE_URL%/}/api/images/cleanup"

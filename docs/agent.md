@@ -156,3 +156,47 @@ success on a field that is still empty.
 
 Nothing a field holds is shown to the model if the field is a password, is named
 like a secret, or holds something shaped like a card number.
+
+## Using the browser — links, addresses, keys, reading
+
+The agent can now follow links, open addresses, go back, press keys and read a
+page's text, not only click and type on the page it started on.
+
+**An address is a channel, so it is gated.** Once the model has read something
+— an inbox, a balance — an instruction planted on the page can ask it to open
+`https://elsewhere.example/?d=<what it read>`, and the navigation itself is the
+leak: no form, no button, nothing the click gate would see. So `navigate` goes
+freely only to a link the current page offers or an address in the user's own
+words, compared without scheme, fragment or trailing slash but *with* the query,
+since the query is where data rides. Anything the model composed — a search URL
+included — is shown to the user in full and waits. `javascript:`, `file:`,
+`chrome:` and `data:` are refused outright. Mutation-checked: loosening the rule
+to "same host as a page link" fails the query-string test.
+
+**Enter is a submit button on the keyboard.** In a form field it submits, in a
+chat box it sends; letting it through would walk around the confirmation on the
+button itself. Enter on a search box is allowed (searching commits nothing);
+Enter in any other field asks; Enter on a button is judged as the click it is.
+Measured on Wikipedia: a dispatched Enter reaches the page's own handlers but the
+browser performs no default action for it, so an ordinary search form never
+submits. The executor calls `form.requestSubmit()` unless a handler already
+dealt with the key.
+
+**Links that open a new tab open in this one.** The agent works in one tab; a
+`target="_blank"` link would put the page somewhere it can never see.
+
+**Every step waits for the load an action may have started**, polling the tab's
+status and then pausing briefly for pages that route on the client and never
+report loading. A page that cannot be scripted (browser pages, the extension
+store, PDF viewers) no longer ends the task: the model is told and can go back.
+
+**The model is told where it is, without the query string** — that is where
+session tokens, password-reset links and OAuth codes live.
+
+`read_text` returns up to 6 000 characters (~1 500 tokens), fenced and labelled
+with its source so it reads as material rather than instruction.
+
+Not verified live: `chrome.tabs.update`, `goBack` and the settle loop need an
+extension context the browser pane here does not provide. They are covered by
+the loop's tests against a fake; the key and form behaviour was measured on a
+real page.

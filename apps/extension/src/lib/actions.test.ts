@@ -3,6 +3,9 @@ import {
   AGENT_SYSTEM_PROMPT,
   AGENT_TOOLS,
   classifyClick,
+  classifyKey,
+  classifyNavigate,
+  comparableUrl,
   classifySelect,
   classifyType,
   describeElement,
@@ -151,6 +154,10 @@ describe('the agent contract', () => {
       'type',
       'select',
       'scroll',
+      'press_key',
+      'navigate',
+      'go_back',
+      'read_text',
       'read_page',
     ])
   })
@@ -239,5 +246,93 @@ describe('what the model is shown of a field', () => {
     const off = el({ ref: 9, tag: 'input', type: 'checkbox', name: 'Terms', checked: false })
     expect(describeElement(on)).toBe('[8] input type=checkbox "Subscribe" checked')
     expect(describeElement(off)).toBe('[9] input type=checkbox "Terms" unchecked')
+  })
+})
+
+describe('classifyNavigate — the channel an address could leak through', () => {
+  const links = ['https://example.com/docs', 'https://example.com/pricing/']
+
+  it('allows following a link the page itself offers', () => {
+    expect(classifyNavigate('https://example.com/docs', links, 'find the docs').kind).toBe('allow')
+  })
+
+  it('treats a trailing slash and a fragment as the same place', () => {
+    expect(classifyNavigate('https://example.com/pricing', links, '').kind).toBe('allow')
+  })
+
+  it('allows an address the user wrote, even without a scheme', () => {
+    expect(
+      classifyNavigate('https://github.com/anthropics', [], 'open github.com/anthropics').kind,
+    ).toBe('allow')
+  })
+
+  it('asks first about an address the model composed itself', () => {
+    const verdict = classifyNavigate('https://elsewhere.example/', links, 'summarise this page')
+    expect(verdict.kind).toBe('confirm')
+  })
+
+  it('asks first when a query was added to an allowed address — that is where data rides', () => {
+    // The page offered /docs; the model tacked something on. This is the leak.
+    const verdict = classifyNavigate('https://example.com/docs?d=balance-4200', links, '')
+    expect(verdict.kind).toBe('confirm')
+  })
+
+  it('shows the user the whole address it wants to open', () => {
+    const verdict = classifyNavigate('https://evil.example/?d=secret', [], '')
+    expect(verdict.kind === 'confirm' && verdict.because).toContain(
+      'https://evil.example/?d=secret',
+    )
+  })
+
+  it.each(['javascript:alert(1)', 'file:///etc/passwd', 'chrome://settings', 'data:text/html,hi'])(
+    'refuses %s outright',
+    (url) => {
+      expect(classifyNavigate(url, [], url).kind).toBe('refuse')
+    },
+  )
+
+  it('refuses something that is not an address at all', () => {
+    expect(classifyNavigate('http://', [], '').kind).toBe('refuse')
+  })
+})
+
+describe('comparableUrl', () => {
+  it('ignores scheme, case of host, fragment and trailing slash', () => {
+    expect(comparableUrl('HTTPS://Example.COM/a/#top')).toBe('example.com/a')
+    expect(comparableUrl('example.com/a')).toBe('example.com/a')
+  })
+
+  it('keeps the query, because that is what differs between a link and a leak', () => {
+    expect(comparableUrl('https://example.com/a?x=1')).toBe('example.com/a?x=1')
+  })
+})
+
+describe('classifyKey — Enter is a submit button on the keyboard', () => {
+  it('lets Enter search from a search box, since searching commits nothing', () => {
+    const box = el({ tag: 'input', type: 'search', name: 'Search Wikipedia', editable: true })
+    expect(classifyKey('Enter', box).kind).toBe('allow')
+  })
+
+  it('asks before Enter in an ordinary field, which may submit or send', () => {
+    const box = el({ tag: 'textarea', name: 'Message', editable: true })
+    expect(classifyKey('Enter', box).kind).toBe('confirm')
+  })
+
+  it('judges Enter on a button as the click it would be', () => {
+    expect(classifyKey('Enter', el({ tag: 'button', name: 'Send' })).kind).toBe('confirm')
+    expect(classifyKey('Enter', el({ tag: 'button', name: 'Show more' })).kind).toBe('allow')
+  })
+
+  it('asks before Enter when nothing is chosen, since anything might have focus', () => {
+    expect(classifyKey('Enter', undefined).kind).toBe('confirm')
+  })
+
+  it('allows keys that commit nothing', () => {
+    expect(classifyKey('Escape', undefined).kind).toBe('allow')
+    expect(classifyKey('ArrowDown', undefined).kind).toBe('allow')
+  })
+
+  it('refuses a key it does not know how to press', () => {
+    expect(classifyKey('F12', undefined).kind).toBe('refuse')
   })
 })

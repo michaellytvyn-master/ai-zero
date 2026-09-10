@@ -3,7 +3,18 @@ import { useCallback } from 'react'
 import { AGENT_TOOLS } from '@/lib/actions'
 import { type AgentEvent, runAgent } from '@/lib/agent'
 import { type ChatEvent, streamChat } from '@/lib/chat'
-import { clickRef, indexPage, scrollPage, selectRef, typeRef } from '@/lib/page-agent'
+import { asContextMessage, readPage } from '@/lib/page-context'
+import {
+  clickRef,
+  goBackTab,
+  indexPage,
+  navigateTab,
+  pressKey,
+  scrollPage,
+  selectRef,
+  typeRef,
+  waitForSettled,
+} from '@/lib/page-agent'
 import type { Session } from '@/lib/session'
 import type { TabChat } from '@/lib/tabs'
 import { type Turn, newTurn } from './turn'
@@ -79,6 +90,13 @@ export function useAct(deps: ActDeps): () => Promise<void> {
           click: (ref) => clickRef(tabId, ref),
           type: (ref, text) => typeRef(tabId, ref, text),
           select: (ref, option) => selectRef(tabId, ref, option),
+          pressKey: (key, ref) => pressKey(tabId, key, ref),
+          navigate: (url) => navigateTab(tabId, url),
+          back: () => goBackTab(tabId),
+          // Fenced and labelled with its source, so it reads as material. About
+          // 1 500 tokens: enough for an article's substance, not the whole day.
+          readText: async () => asContextMessage(await readPage(tabId, 'text', 6_000)),
+          settle: () => waitForSettled(tabId),
           scroll: (direction) => scrollPage(tabId, direction),
           confirm: deps.confirm,
           think: (messages) =>

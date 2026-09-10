@@ -1,46 +1,41 @@
-# Screenshots and the demo recording
+# Store images
 
-These need a real Chrome profile with the extension loaded and a signed-in
-account, so they have to be captured by hand. Everything else in `store/` is
-ready to paste.
+Checked against <https://developer.chrome.com/docs/webstore/images> on 2026-09-10.
 
-## What the store requires
+| Asset | Size | Required | Status |
+|---|---|---|---|
+| Store icon | 128×128 PNG, 96×96 artwork + 16px transparent padding | yes | ready — [`icon-128.png`](icon-128.png) |
+| Small promo tile | 440×280 | **yes** | ready — [`promo-small-440x280.png`](promo-small-440x280.png) |
+| Screenshots | 1280×800 (preferred) or 640×400, one to five | yes | **capture by hand** — below |
+| Marquee promo | 1400×560 | no | ready — [`promo-marquee-1400x560.png`](promo-marquee-1400x560.png) |
 
-- At least one screenshot, 1280x800 or 640x400. Five is the maximum and the
-  first is the one most people see.
-- Optional promo tile, 440x280. Skip it until the rest is ready; a bad tile is
-  worse than none.
+The icons and tiles are generated: `pnpm icons` draws the icons, and the tiles use the same mark and
+palette. The small promo tile was once listed here as optional; it is required now, and a listing
+without one is shown after every listing that has one.
 
-## Setup
+## Screenshots — these need a real signed-in profile
 
-```bash
-pnpm --filter @zca/extension build
-```
+They show the extension working, so they cannot be generated. Build it against the site you will
+publish with, load `apps/extension/dist`, sign in, and add at least one provider key with a little
+real history behind it.
 
-Load `apps/extension/dist` at `chrome://extensions` with developer mode on,
-run the site with `pnpm dev`, and sign in through the panel.
+Capture at 1280×800. On macOS, size the window first, then <kbd>⌘</kbd>+<kbd>Shift</kbd>+<kbd>4</kbd>
+and <kbd>Space</kbd> to capture that window.
 
-## The five to capture
+1. **A chat mid-answer** in the side panel, beside a real article, with the provider badge visible.
+   This is the first image and most people see only this one: it shows the product working.
+2. **Act mode stopped at the confirmation gate** — "click [n] "Send" — This submits the form." with
+   *Don't* and *Do it*. It answers the question every careful user has before installing an
+   extension that can click: what stops it doing something I didn't want?
+3. **A reasoning model answering**, with the thinking collapsed above the answer.
+4. **Right-click "Ask AI about …"** on selected text, with the context menu open.
+5. **The keys page on the site**, a key shown as `••••` and its last four characters. This one
+   answers "where do my keys go".
 
-1. **A chat mid-answer**, with the provider badge visible. This is the first
-   screenshot: it shows the product working and shows the failover story in one
-   glance. Ask something whose answer is a few lines, and capture while the
-   provider badge reads `via groq` or similar.
-2. **The savings panel open**, showing the total and the per-provider
-   breakdown. Use an account with real history — a total of `$0.0000` sells
-   nothing and looks broken.
-3. **Right-click "Ask AI about ..."** on selected text on a real article, with
-   the context menu open.
-4. **"Add page" used**, showing the quoted page context in the composer and the
-   truncation note.
-5. **The keys page on the site**, showing a key stored as `••••` with its last
-   four characters. This is the one that answers "where do my keys go".
+Do not stage a screenshot with a fabricated savings total, a provider that did not actually answer,
+or an action the extension did not take. The real ones are cheap to make.
 
-Do not stage a screenshot with a fabricated savings total or a provider that
-did not actually answer. The numbers are cheap to generate honestly.
+## The README recording, optional
 
-## The README recording
-
-A short loop is enough: open the panel with the keyboard shortcut, ask
-something, let it stream, open the savings panel. Keep it under fifteen seconds
-and save it to `docs/demo.gif`, then the README picks it up.
+A short loop: open the panel with the keyboard shortcut, ask something, let it stream. Under fifteen
+seconds, saved as `docs/images/demo.gif`, and add it to the README under the screenshots.

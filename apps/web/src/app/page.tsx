@@ -113,7 +113,7 @@ export default async function LandingPage() {
               <div className="l-msg ai">
                 Nothing. The request went to your own Groq account, and the page was read on your
                 instruction.
-                <span className="l-src">llama-3.3-70b · 412ms · $0.00</span>
+                <span className="l-src">gpt-oss-120b · 412ms · $0.00</span>
               </div>
             </div>
             <div className="l-mockbar">
