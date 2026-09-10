@@ -1,9 +1,16 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import AdminLoginForm from '@/components/admin-login-form'
 import { isAdminConfigured, isAdminSignedIn, makeChallenge } from '@/lib/admin-auth'
 
+export const metadata: Metadata = {
+  title: 'Operator sign-in',
+  // Behind a sign-in; robots.txt disallows it too, but a disallowed URL can
+  // still be indexed from an external link — only the tag actually prevents it.
+  robots: { index: false, follow: false },
+}
+
 export const dynamic = 'force-dynamic'
-export const metadata = { title: 'Operator', robots: { index: false, follow: false } }
 
 export default async function AdminLoginPage() {
   if (await isAdminSignedIn()) redirect('/admin')

@@ -8,6 +8,8 @@ export interface ProviderInfo {
   readonly credentialHint: string
   readonly baseUrl: string
   readonly models: { id: string; label: string; contextWindow: number }[]
+  /** Set where this provider's free tier treats what you send differently. */
+  readonly privacyWarning?: string
   /** The user's own key, or null when they have not added one for this provider. */
   readonly key: string | null
 }

@@ -1,11 +1,58 @@
-import type { Metadata } from 'next'
-import Link from 'next/link'
+import type { Metadata, Viewport } from 'next'
 import { safeAuth } from '@/auth'
+import SiteNav from '@/components/site-nav'
+import { SITE_DESCRIPTION, SITE_NAME, siteOrigin, siteUrl } from '@/lib/site'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Zero-Cost AI',
-  description: 'A chat that runs on free LLM provider tiers, with automatic failover.',
+  // Makes every relative canonical, Open Graph and sitemap URL absolute.
+  metadataBase: new URL(siteOrigin()),
+  title: {
+    default: `${SITE_NAME} — your own free AI keys, one interface`,
+    template: `%s · ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  keywords: [
+    'free AI chat',
+    'bring your own key',
+    'BYOK AI',
+    'Groq',
+    'Cloudflare Workers AI',
+    'OpenAI-compatible API',
+    'LLM router',
+    'AI failover',
+  ],
+  authors: [{ name: 'Michael Lytvyn' }],
+  creator: 'Michael Lytvyn',
+  alternates: { canonical: '/' },
+  openGraph: {
+    type: 'website',
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} — your own free AI keys, one interface`,
+    description: SITE_DESCRIPTION,
+    url: siteUrl('/'),
+    locale: 'en_US',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${SITE_NAME} — your own free AI keys, one interface`,
+    description: SITE_DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 },
+  },
+  formatDetection: { telephone: false, address: false, email: false },
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: '#07080a',
+  // The design is committed to dark; saying so stops the first paint flashing.
+  colorScheme: 'dark',
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -15,30 +62,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en">
       <body>
-        <nav className="nav">
-          <Link href="/">Zero-Cost AI</Link>
-          {email !== null && <Link href="/chat">Chat</Link>}
-          {email !== null && <Link href="/settings">Dashboard</Link>}
-          <span className="spacer" />
-          <Link href="/privacy" className="muted">
-            Privacy
-          </Link>
-          <Link href="/terms" className="muted">
-            Terms
-          </Link>
-          {email === null ? (
-            <>
-              <Link href="/signin">Sign in</Link>
-              <Link href="/register">
-                <button className="primary" type="button" style={{ padding: '5px 12px' }}>
-                  Sign up
-                </button>
-              </Link>
-            </>
-          ) : (
-            <span className="muted">{email}</span>
-          )}
-        </nav>
+        <SiteNav email={email} />
         {children}
       </body>
     </html>

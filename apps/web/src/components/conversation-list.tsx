@@ -16,7 +16,13 @@ export default function ConversationList(props: {
   conversations: ConversationRow[]
   nextCursor: string | null
   activeId: string | null
+  /** Drawer state below 860px; ignored by the desktop grid layout. */
+  open?: boolean
+  onNavigate?: () => void
 }) {
+  // Defaulted here rather than at the prop, because exactOptionalPropertyTypes
+  // will not pass `undefined` through to Link's onClick.
+  const onNavigate = props.onNavigate ?? noop
   const router = useRouter()
   const [rows, setRows] = useState(props.conversations)
   const [cursor, setCursor] = useState(props.nextCursor)
@@ -62,8 +68,8 @@ export default function ConversationList(props: {
   }
 
   return (
-    <aside className="chatlist">
-      <Link href="/chat">
+    <aside className={props.open === true ? 'chatlist open' : 'chatlist'}>
+      <Link href="/chat" onClick={onNavigate}>
         <button type="button" className="wide">
           New chat
         </button>
@@ -71,7 +77,9 @@ export default function ConversationList(props: {
 
       {rows.map((row) => (
         <div key={row.id} className={row.id === props.activeId ? 'chatrow current' : 'chatrow'}>
-          <Link href={`/chat?c=${row.id}`}>{row.title}</Link>
+          <Link href={`/chat?c=${row.id}`} onClick={onNavigate}>
+            {row.title}
+          </Link>
           <button
             type="button"
             className="icon"
@@ -89,3 +97,5 @@ export default function ConversationList(props: {
     </aside>
   )
 }
+
+function noop() {}

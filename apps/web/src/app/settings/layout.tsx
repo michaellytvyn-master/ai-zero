@@ -1,6 +1,14 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { safeAuth } from '@/auth'
 import SideNav from '@/components/side-nav'
+
+export const metadata: Metadata = {
+  title: 'Settings',
+  // Behind a sign-in; robots.txt disallows it too, but a disallowed URL can
+  // still be indexed from an external link — only the tag actually prevents it.
+  robots: { index: false, follow: false },
+}
 
 export const dynamic = 'force-dynamic'
 

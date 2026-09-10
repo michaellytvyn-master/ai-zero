@@ -13,6 +13,14 @@ export interface ResponseModeSpec {
    * request, not a limit.
    */
   readonly maxTokens: number
+  /**
+   * Extra ceiling for a reasoning model's thinking, granted on top of
+   * maxTokens. Without it the whole allowance goes on the thought and the
+   * answer is cut off before it starts; it is not spent by ordinary models.
+   */
+  readonly reasoningTokens: number
+  /** Passed to providers with a native effort dial, so the two agree. */
+  readonly reasoningEffort: 'low' | 'medium' | 'high'
   readonly systemPrompt: string
 }
 
@@ -25,6 +33,8 @@ export const responseModes: readonly ResponseModeSpec[] = [
     label: 'Eco',
     hint: 'short answers, least tokens',
     maxTokens: 400,
+    reasoningTokens: 1500,
+    reasoningEffort: 'low',
     systemPrompt:
       'Answer in as few words as the question honestly needs. No preamble, no restating the ' +
       'question, no closing summary. If one sentence or a short list is the whole answer, stop ' +
@@ -35,6 +45,8 @@ export const responseModes: readonly ResponseModeSpec[] = [
     label: 'Thinking',
     hint: 'reasons first, then answers',
     maxTokens: 1500,
+    reasoningTokens: 3000,
+    reasoningEffort: 'medium',
     systemPrompt:
       'Work the problem through before answering. Show the reasoning that actually bears on the ' +
       'result, skip the rest, then state the conclusion plainly. Do not pad, and do not repeat ' +
@@ -45,6 +57,8 @@ export const responseModes: readonly ResponseModeSpec[] = [
     label: 'Max',
     hint: 'thorough, costs the most',
     maxTokens: 4000,
+    reasoningTokens: 8000,
+    reasoningEffort: 'high',
     systemPrompt:
       'Give a complete answer. Cover the edge cases and caveats that matter, include an example ' +
       'where one clarifies, and explain why, not just what. Use headings or lists when the answer ' +
@@ -74,5 +88,11 @@ export function applyResponseMode(request: ChatRequest, mode: ResponseMode): Cha
     ...request,
     messages: [instruction, ...request.messages],
     maxTokens: request.maxTokens ?? spec.maxTokens,
+    // Adapters apply this only to models that actually reason, so the ceiling
+    // an ordinary model sees is unchanged.
+    reasoning: request.reasoning ?? {
+      extraTokens: spec.reasoningTokens,
+      effort: spec.reasoningEffort,
+    },
   }
 }

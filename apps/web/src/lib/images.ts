@@ -1,16 +1,31 @@
-import { and, eq, isNull, lt, sql } from 'drizzle-orm'
+import { and, eq, isNull, lt, or, sql } from 'drizzle-orm'
 import { db } from '../db'
 import { generatedImages } from '../db/schema'
-import { deleteImage } from './cloudinary'
+import { deleteImage, operatorCloudinary } from './cloudinary'
 
-/** Long enough to look at and save, short enough not to fill the account. */
+/**
+ * How long a picture survives in the operator's shared test pool: long enough
+ * to look at and save, short enough not to fill the account. A picture in the
+ * user's own account has no lifetime at all.
+ */
 export const IMAGE_LIFETIME_MS = 60 * 60 * 1000
+
+export type ImageStorage = 'operator' | 'user'
+
+/**
+ * The user's own account keeps what it is given; only the shared pool expires.
+ * Separate from the insert so the rule can be checked without a database.
+ */
+export function expiryFor(storage: ImageStorage, now = Date.now()): Date | null {
+  return storage === 'user' ? null : new Date(now + IMAGE_LIFETIME_MS)
+}
 
 export interface StoredImageRow {
   readonly id: string
   readonly url: string
   readonly model: string
-  readonly expiresAt: Date
+  /** Null when the picture is in the user's own account and is not swept. */
+  readonly expiresAt: Date | null
 }
 
 export async function recordImage(input: {
@@ -20,8 +35,10 @@ export async function recordImage(input: {
   url: string
   model: string
   bytes: number
+  storage: ImageStorage
 }): Promise<StoredImageRow> {
-  const expiresAt = new Date(Date.now() + IMAGE_LIFETIME_MS)
+  // The user's own account keeps what it is given; only the shared pool expires.
+  const expiresAt = input.storage === 'user' ? null : new Date(Date.now() + IMAGE_LIFETIME_MS)
   const rows = await db()
     .insert(generatedImages)
     .values({ ...input, expiresAt })
@@ -41,21 +58,35 @@ export async function recordImage(input: {
  * Deletes from Cloudinary first and marks the row only on success, so a failed
  * call is retried on the next sweep instead of leaving an orphan nobody will
  * ever clean up.
+ *
+ * Only the operator's own pool is swept. A row in a user's account has a null
+ * expiry and the `user` storage marker; both are checked, because deleting
+ * someone else's picture with our credentials would fail anyway, and deleting
+ * it successfully would be worse.
  */
 export async function purgeExpiredImages(
   limit = 100,
 ): Promise<{ deleted: number; failed: number }> {
+  const account = operatorCloudinary()
+  if (account === null) return { deleted: 0, failed: 0 }
+
   const due = await db()
     .select({ id: generatedImages.id, publicId: generatedImages.publicId })
     .from(generatedImages)
-    .where(and(isNull(generatedImages.deletedAt), lt(generatedImages.expiresAt, new Date())))
+    .where(
+      and(
+        isNull(generatedImages.deletedAt),
+        eq(generatedImages.storage, 'operator'),
+        lt(generatedImages.expiresAt, new Date()),
+      ),
+    )
     .limit(limit)
 
   let deleted = 0
   let failed = 0
 
   for (const row of due) {
-    const gone = await deleteImage(row.publicId).catch(() => false)
+    const gone = await deleteImage(row.publicId, account).catch(() => false)
     if (!gone) {
       failed += 1
       continue
@@ -83,7 +114,8 @@ export async function liveImagesFor(userId: string): Promise<StoredImageRow[]> {
       and(
         eq(generatedImages.userId, userId),
         isNull(generatedImages.deletedAt),
-        sql`${generatedImages.expiresAt} > now()`,
+        // A null expiry is a picture in the user's own account: it never goes.
+        or(isNull(generatedImages.expiresAt), sql`${generatedImages.expiresAt} > now()`),
       ),
     )
 }

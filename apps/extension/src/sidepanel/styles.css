@@ -385,3 +385,101 @@ a:hover {
 .toggle:has(input:disabled) {
   opacity: 0.45;
 }
+
+/* The model's working-out: quieter than the answer, and collapsed once the
+   answer arrives. Matches the web app's treatment at panel scale. */
+.reasoning {
+  margin: 0 0 8px;
+  border-left: 2px solid #2a3138;
+  padding-left: 9px;
+}
+.reasoning .head {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: #4a545d;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.reasoning .head:hover {
+  color: #78838d;
+}
+.reasoning .caret {
+  display: inline-block;
+  transition: transform 200ms ease;
+}
+.reasoning.open .caret {
+  transform: rotate(90deg);
+}
+.reasoning .body {
+  margin-top: 5px;
+  max-height: 140px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font:
+    11px / 1.6 ui-monospace,
+    Menlo,
+    monospace;
+  color: #4a545d;
+}
+
+/* A caution about the provider that is about to answer. Sits under the
+   controls, where the choice was just made, rather than in a settings page the
+   user is not looking at. */
+.caution {
+  margin: 8px 0 0;
+  padding: 7px 9px;
+  border-radius: 7px;
+  border-left: 2px solid #ff5c69;
+  background: rgb(255 92 105 / 12%);
+  color: #9aa5a0;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+/* The confirmation gate. Sits above the composer, in the way, on purpose. */
+.gate {
+  margin: 0 0 8px;
+  padding: 10px 11px;
+  border: 1px solid #2a3138;
+  border-left: 2px solid #21e58a;
+  border-radius: 9px;
+  background: #121519;
+}
+.gate .what {
+  margin: 0 0 9px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #e9edf0;
+  overflow-wrap: anywhere;
+}
+.gate .row {
+  display: flex;
+  gap: 7px;
+  justify-content: flex-end;
+}
+.gate button {
+  font-size: 12px;
+  padding: 5px 12px;
+}
+
+/* What the agent did, listed as it happens. */
+.trace {
+  margin: 0 0 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  color: #4a545d;
+}
+.trace .refused {
+  color: #ff5c69;
+}
+.trace .declined {
+  color: #78838d;
+}

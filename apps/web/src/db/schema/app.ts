@@ -158,7 +158,14 @@ export const generatedImages = pgTable(
     model: text('model').notNull(),
     bytes: integer('bytes').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    /**
+     * Null means the picture is kept: it lives in the user's own Cloudinary
+     * account, which we have no business sweeping. Only pictures written to the
+     * operator's shared test pool carry an expiry.
+     */
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    /** Whose Cloudinary account holds it — and therefore whose key can delete it. */
+    storage: text('storage').notNull().default('operator'),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
   },
   (table) => [index('generated_image_expiry').on(table.expiresAt)],

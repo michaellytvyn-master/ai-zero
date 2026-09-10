@@ -12,6 +12,13 @@ import type { CooldownStore } from './store'
 export type RouterEvent =
   | { readonly kind: 'selected'; readonly providerId: string; readonly model: string }
   | { readonly kind: 'delta'; readonly content: string }
+  | { readonly kind: 'reasoning'; readonly content: string }
+  | {
+      readonly kind: 'tool_call'
+      readonly id: string
+      readonly name: string
+      readonly args: string
+    }
   | { readonly kind: 'usage'; readonly inputTokens: number; readonly outputTokens: number }
   | { readonly kind: 'stop'; readonly finishReason: string | null }
 
@@ -124,6 +131,10 @@ async function* stream(
       const chunk = result.value
       if (chunk.kind === 'delta') {
         yield { kind: 'delta', content: chunk.content }
+      } else if (chunk.kind === 'reasoning') {
+        yield { kind: 'reasoning', content: chunk.content }
+      } else if (chunk.kind === 'tool_call') {
+        yield { kind: 'tool_call', id: chunk.id, name: chunk.name, args: chunk.args }
       } else if (chunk.kind === 'usage') {
         inputTokens = chunk.inputTokens
         outputTokens = chunk.outputTokens

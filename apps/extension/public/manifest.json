@@ -16,7 +16,8 @@
   "host_permissions": [
     "http://localhost:3000/*",
     "https://api.groq.com/*",
-    "https://api.cloudflare.com/*"
+    "https://api.cloudflare.com/*",
+    "https://generativelanguage.googleapis.com/*"
   ],
   "background": {
     "service_worker": "background.js",

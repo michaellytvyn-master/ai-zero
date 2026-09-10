@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { signInWithGoogle, signInWithPassword } from '@/actions/auth'
 import { safeAuth } from '@/auth'
@@ -5,6 +6,12 @@ import AuthForm from '@/components/auth-form'
 import SetupNeeded from '@/components/setup-needed'
 import { isDatabaseConfigured, isGoogleConfigured, isSessionConfigured } from '@/config'
 import { MIN_PASSWORD_LENGTH } from '@/lib/password'
+
+export const metadata: Metadata = {
+  title: 'Sign in',
+  description: 'Sign in to Zero-Cost AI with your email and password, or with Google.',
+  alternates: { canonical: '/signin' },
+}
 
 export const dynamic = 'force-dynamic'
 

@@ -1,6 +1,14 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { safeAuth } from '@/auth'
 import { issueExtensionToken } from '@/lib/extension-auth'
+
+export const metadata: Metadata = {
+  title: 'Authorize the extension',
+  // Behind a sign-in; robots.txt disallows it too, but a disallowed URL can
+  // still be indexed from an external link — only the tag actually prevents it.
+  robots: { index: false, follow: false },
+}
 
 export const dynamic = 'force-dynamic'
 

@@ -1,7 +1,6 @@
 import type { Savings } from '@zca/pricing'
 import { useEffect, useRef, useState } from 'react'
 import { usesOwnKeys } from '@/lib/chat'
-import { pickableModels } from '@/lib/models'
 import { canSearch } from '@/lib/web-context'
 import type { PageMode } from '@/lib/page-context'
 import { hasPageAccess, isReadable, requestPageAccess } from '@/lib/permissions'
@@ -13,6 +12,10 @@ import Composer from './Composer'
 import ExhaustedNotice from './ExhaustedNotice'
 import Header from './Header'
 import MessageList from './MessageList'
+import ConfirmGate from './ConfirmGate'
+import { useAct } from './use-act'
+import { useConfirm } from './use-confirm'
+import { contentLength, useStickToBottom } from './use-stick-to-bottom'
 import SavingsPanel from './SavingsPanel'
 import SignIn from './SignIn'
 import { useSend } from './use-send'
@@ -30,6 +33,7 @@ export default function App() {
   const [showSavings, setShowSavings] = useState(false)
   const [attached, setAttached] = useState<string | null>(null)
   const [grouping, setGrouping] = useState(true)
+  const [pageAccess, setPageAccess] = useState(false)
   const log = useRef<HTMLDivElement>(null)
 
   const signedIn = session ?? null
@@ -56,18 +60,36 @@ export default function App() {
 
   // Page reading is on by default, but only makes sense once access exists.
   // Quietly falling back beats defaulting to a setting that errors on first use.
+  // The same grant is what acting needs, so the answer is kept rather than
+  // asked for twice.
   useEffect(() => {
-    if (chat.pageMode === 'off') return
     void hasPageAccess().then((granted) => {
-      if (!granted) patchChat({ pageMode: 'off' })
+      setPageAccess(granted)
+      if (!granted && chat.pageMode !== 'off') patchChat({ pageMode: 'off' })
     })
   }, [chat.pageMode, patchChat])
 
+  // Acting injects a script on every step, so a revoked grant makes the whole
+  // mode a series of failures. Switch it off rather than let it fail silently.
   useEffect(() => {
-    const panel = log.current
-    if (panel === null || turns.length === 0) return
-    panel.scrollTo({ top: panel.scrollHeight })
-  }, [turns])
+    if (!pageAccess && chat.act) patchChat({ act: false })
+  }, [pageAccess, chat.act, patchChat])
+
+  useStickToBottom(log, contentLength(turns))
+
+  const { pending, ask, answer } = useConfirm()
+
+  const act = useAct({
+    session: signedIn,
+    tabId,
+    chat,
+    busy,
+    setTurns,
+    patchChat,
+    setBusy,
+    setError,
+    confirm: ask,
+  })
 
   const send = useSend({
     session: signedIn,
@@ -109,6 +131,7 @@ export default function App() {
     void requestPageAccess().then((granted) => {
       if (granted) {
         setError(null)
+        setPageAccess(true)
         patchChat({ pageMode: mode })
       } else {
         patchChat({ pageMode: 'off' })
@@ -153,18 +176,24 @@ export default function App() {
 
       {error !== null && <div className="notice bad">{error}</div>}
 
+      {pending !== null && <ConfirmGate pending={pending} onAnswer={answer} />}
+
       <Composer
         draft={chat.draft}
         onDraft={(draft) => patchChat({ draft })}
-        onSend={() => void send()}
+        onSend={() => void (chat.act ? act() : send())}
         busy={busy}
         pageMode={chat.pageMode}
         onPageMode={choosePageMode}
-        models={pickableModels(session)}
         model={chat.model}
         onModel={(model) => patchChat({ model })}
         searchWeb={chat.searchWeb}
         onSearchWeb={(searchWeb) => patchChat({ searchWeb })}
+        act={chat.act}
+        onAct={(act) => patchChat({ act })}
+        // Acting needs the same page access reading does; without it every
+        // step would fail on the first injection.
+        canAct={pageAccess}
         canSearch={canSearch(session)}
         responseMode={chat.responseMode}
         onResponseMode={(responseMode) => patchChat({ responseMode })}

@@ -64,11 +64,13 @@ export default function MicButton({
       onClick={() => void (state === 'recording' ? finish() : begin())}
       disabled={state === 'transcribing'}
       title={`Voice input, up to ${MAX_RECORDING_SECONDS} seconds`}
-      className="row"
-      style={state === 'recording' ? { borderColor: 'var(--danger)', color: 'var(--danger)' } : {}}
+      className={state === 'recording' ? 'round recording' : 'round'}
     >
-      <Icon shape={state === 'recording' ? MIC_OFF : MIC} />
-      {state === 'recording' ? 'Stop' : state === 'transcribing' ? '…' : 'Speak'}
+      {state === 'transcribing' ? (
+        <span className="spin" />
+      ) : (
+        <Icon shape={state === 'recording' ? MIC_OFF : MIC} size={17} />
+      )}
     </button>
   )
 }

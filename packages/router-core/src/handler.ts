@@ -77,6 +77,12 @@ function streamingResponse(
             send(
               sseEvent(chunkPayload(id, created, selected.model, { content: event.content }, null)),
             )
+          } else if (event.kind === 'reasoning') {
+            send(
+              sseEvent(
+                chunkPayload(id, created, selected.model, { reasoning: event.content }, null),
+              ),
+            )
           } else if (event.kind === 'stop') {
             send(
               sseEvent(chunkPayload(id, created, selected.model, {}, event.finishReason ?? 'stop')),
@@ -172,7 +178,7 @@ export function failureResponse(error: unknown): Response {
       {
         error: {
           type: 'no_provider_available',
-          message: 'every provider was skipped or failed',
+          message: error.message,
           attempts: error.attempts,
         },
       },

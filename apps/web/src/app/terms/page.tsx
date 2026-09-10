@@ -1,8 +1,14 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { orderedProviders } from '@zca/providers'
 import { runtimeConfig } from '@/config'
 
-export const metadata = { title: 'Terms' }
+export const metadata: Metadata = {
+  title: 'Terms',
+  description:
+    'The terms for using Zero-Cost AI: software over your own provider accounts, with no model access resold.',
+  alternates: { canonical: '/terms' },
+}
 
 export default function TermsPage() {
   const trial = runtimeConfig().DEMO_MESSAGES_PER_ACCOUNT_PER_DAY

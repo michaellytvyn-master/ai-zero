@@ -46,33 +46,35 @@ export default async function SettingsPage() {
           No extension is connected. Install it, open the side panel and sign in there.
         </p>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>Connected</th>
-              <th>Last seen</th>
-              <th>Expires</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {extensions.map((item) => (
-              <tr key={item.id}>
-                <td>{item.createdAt.toISOString().slice(0, 10)}</td>
-                <td className="muted">
-                  {item.lastSeenAt.toISOString().slice(0, 16).replace('T', ' ')}
-                </td>
-                <td className="muted">{item.expiresAt.toISOString().slice(0, 10)}</td>
-                <td style={{ textAlign: 'right' }}>
-                  <form action={revokeExtension}>
-                    <input type="hidden" name="id" value={item.id} />
-                    <button type="submit">Revoke</button>
-                  </form>
-                </td>
+        <div className="tablewrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Connected</th>
+                <th>Last seen</th>
+                <th>Expires</th>
+                <th />
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {extensions.map((item) => (
+                <tr key={item.id}>
+                  <td>{item.createdAt.toISOString().slice(0, 10)}</td>
+                  <td className="muted">
+                    {item.lastSeenAt.toISOString().slice(0, 16).replace('T', ' ')}
+                  </td>
+                  <td className="muted">{item.expiresAt.toISOString().slice(0, 10)}</td>
+                  <td style={{ textAlign: 'right' }}>
+                    <form action={revokeExtension}>
+                      <input type="hidden" name="id" value={item.id} />
+                      <button type="submit">Revoke</button>
+                    </form>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
       <p className="muted" style={{ fontSize: 13 }}>
         Revoking signs that browser out. Your provider keys stay on your account.

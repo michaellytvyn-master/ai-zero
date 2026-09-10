@@ -29,7 +29,9 @@ export function chunkPayload(
   id: string,
   created: number,
   model: string,
-  delta: { content?: string },
+  // `reasoning` follows what Groq and DeepSeek already send. Plain OpenAI
+  // clients ignore the extra field; ours renders it apart from the answer.
+  delta: { content?: string; reasoning?: string },
   finishReason: string | null,
 ): unknown {
   return {

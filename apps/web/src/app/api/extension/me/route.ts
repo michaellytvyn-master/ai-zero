@@ -18,7 +18,11 @@ export async function GET(request: Request): Promise<Response> {
   if (user === null) return unauthenticatedResponse()
 
   const keys = await decryptedKeys(user.id)
-  const allowance = keys.size > 0 ? null : await demoRemaining(user.id)
+  // Counted across model providers only. The same vault also holds a Cloudinary
+  // credential for image storage, and connecting somewhere to keep pictures
+  // must not make the panel claim the user is running on their own keys.
+  const usingOwnKeys = orderedProviders().some((provider) => keys.has(provider.id))
+  const allowance = usingOwnKeys ? null : await demoRemaining(user.id)
 
   return Response.json(
     {
@@ -34,6 +38,12 @@ export async function GET(request: Request): Promise<Response> {
           contextWindow: model.contextWindow,
         })),
         baseUrl: provider.baseUrl,
+        // Sent so the panel can warn at the moment of use. It matters more here
+        // than on the website: page reading hands the provider the page the
+        // user is looking at.
+        ...(provider.privacyWarning !== undefined && {
+          privacyWarning: provider.privacyWarning,
+        }),
         key: keys.get(provider.id) ?? null,
       })),
       demo: allowance === null ? null : { remaining: allowance.remaining, limit: allowance.limit },

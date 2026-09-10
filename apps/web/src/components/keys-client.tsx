@@ -9,6 +9,10 @@ interface ProviderOption {
   signupUrl: string
   credentialHint: string
   free: boolean
+  /** Set only where this provider's free tier treats conversations differently. */
+  privacyWarning?: string
+  /** Shown under the field: what connecting this actually changes. */
+  note?: string
 }
 
 interface StoredKey {
@@ -73,6 +77,15 @@ export default function KeysClient(props: {
                 Get a key
               </a>
             </div>
+
+            {provider.privacyWarning !== undefined && (
+              <p className="warn">{provider.privacyWarning}</p>
+            )}
+            {provider.note !== undefined && (
+              <p className="muted small" style={{ margin: '8px 0 0' }}>
+                {provider.note}
+              </p>
+            )}
 
             {stored !== undefined ? (
               <div className="row" style={{ marginTop: 10 }}>

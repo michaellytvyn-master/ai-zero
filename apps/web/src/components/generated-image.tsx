@@ -12,13 +12,23 @@ function remaining(expiresAt: string): string {
   return `deleted in ${minutes} min`
 }
 
-export default function GeneratedImage(props: { url: string; expiresAt: string; model: string }) {
-  const [label, setLabel] = useState(() => remaining(props.expiresAt))
+export default function GeneratedImage(props: {
+  url: string
+  /** Null when it went to the user's own account, where nothing expires. */
+  expiresAt: string | null
+  model: string
+}) {
+  const kept = props.expiresAt === null
+  const [label, setLabel] = useState(() =>
+    props.expiresAt === null ? 'kept in your account' : remaining(props.expiresAt),
+  )
 
   // Counts down rather than showing a fixed figure, so the warning stays true
-  // as the hour runs out.
+  // as the hour runs out. A kept picture has nothing to count.
   useEffect(() => {
-    const timer = setInterval(() => setLabel(remaining(props.expiresAt)), 30_000)
+    const at = props.expiresAt
+    if (at === null) return
+    const timer = setInterval(() => setLabel(remaining(at)), 30_000)
     return () => clearInterval(timer)
   }, [props.expiresAt])
 
@@ -26,7 +36,16 @@ export default function GeneratedImage(props: { url: string; expiresAt: string; 
     <figure className="genimage" style={{ margin: 0 }}>
       <img src={props.url} alt="Generated" loading="lazy" />
       <figcaption className="meta">
-        <span title="Images are removed automatically to keep storage free">{label}</span>
+        <span
+          title={
+            kept
+              ? 'Stored in your own Cloudinary account, for as long as you keep it there'
+              : 'Images in the shared test pool are removed automatically to keep storage free'
+          }
+          className={kept ? 'ok' : ''}
+        >
+          {label}
+        </span>
         <span className="spacer" style={{ marginLeft: 'auto' }} />
         <a href={asDownloadUrl(props.url, 'zero-cost-ai')} download className="row">
           <Icon shape={DOWNLOAD} size={14} />

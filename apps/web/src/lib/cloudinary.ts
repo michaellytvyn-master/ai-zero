@@ -8,19 +8,52 @@ const configSchema = z.object({
 })
 
 export class CloudinaryNotConfigured extends Error {}
+export class CloudinaryCredentialError extends Error {}
+
+/** Whose account a picture is being written to. */
+export interface CloudinaryCredential {
+  readonly cloudName: string
+  readonly apiKey: string
+  readonly apiSecret: string
+}
 
 export function isCloudinaryConfigured(): boolean {
   return configSchema.safeParse(process.env).success
 }
 
-function config() {
+/**
+ * The operator's own account: the shared test pool, swept hourly. A user who
+ * connects their own account writes there instead and keeps the pictures.
+ */
+export function operatorCloudinary(): CloudinaryCredential | null {
   const parsed = configSchema.safeParse(process.env)
-  if (!parsed.success) {
-    throw new CloudinaryNotConfigured(
-      'Image generation needs CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET.',
+  if (!parsed.success) return null
+  return {
+    cloudName: parsed.data.CLOUDINARY_CLOUD_NAME,
+    apiKey: parsed.data.CLOUDINARY_API_KEY,
+    apiSecret: parsed.data.CLOUDINARY_API_SECRET,
+  }
+}
+
+/**
+ * What the user pastes: the three values Cloudinary's dashboard shows together,
+ * joined by colons — the same shape Cloudflare's credential already uses, so
+ * the account panel needs no second kind of field.
+ *
+ * The secret may itself contain a colon, so only the first two are split off.
+ */
+export function parseCloudinaryCredential(raw: string): CloudinaryCredential {
+  const parts = raw.trim().split(':')
+  const cloudName = parts[0]?.trim() ?? ''
+  const apiKey = parts[1]?.trim() ?? ''
+  const apiSecret = parts.slice(2).join(':').trim()
+
+  if (cloudName === '' || apiKey === '' || apiSecret === '') {
+    throw new CloudinaryCredentialError(
+      'Paste it as cloud_name:api_key:api_secret, all three from your Cloudinary dashboard.',
     )
   }
-  return parsed.data
+  return { cloudName, apiKey, apiSecret }
 }
 
 /**
@@ -47,20 +80,20 @@ export async function uploadImage(
   image: Uint8Array,
   folder: string,
   signal: AbortSignal,
+  account: CloudinaryCredential,
 ): Promise<StoredImage> {
-  const { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET } = config()
   const timestamp = String(Math.floor(Date.now() / 1000))
   const signed = { folder, timestamp }
 
   const form = new FormData()
   form.append('file', new Blob([image as BlobPart], { type: 'image/png' }), 'image.png')
-  form.append('api_key', CLOUDINARY_API_KEY)
+  form.append('api_key', account.apiKey)
   form.append('folder', folder)
   form.append('timestamp', timestamp)
-  form.append('signature', signParams(signed, CLOUDINARY_API_SECRET))
+  form.append('signature', signParams(signed, account.apiSecret))
 
   const response = await fetch(
-    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+    `https://api.cloudinary.com/v1_1/${account.cloudName}/image/upload`,
     { method: 'POST', body: form, signal },
   )
 
@@ -80,18 +113,20 @@ export async function uploadImage(
 }
 
 /** Returns true when the asset is gone, including when it was already absent. */
-export async function deleteImage(publicId: string): Promise<boolean> {
-  const { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET } = config()
+export async function deleteImage(
+  publicId: string,
+  account: CloudinaryCredential,
+): Promise<boolean> {
   const timestamp = String(Math.floor(Date.now() / 1000))
 
   const form = new FormData()
   form.append('public_id', publicId)
-  form.append('api_key', CLOUDINARY_API_KEY)
+  form.append('api_key', account.apiKey)
   form.append('timestamp', timestamp)
-  form.append('signature', signParams({ public_id: publicId, timestamp }, CLOUDINARY_API_SECRET))
+  form.append('signature', signParams({ public_id: publicId, timestamp }, account.apiSecret))
 
   const response = await fetch(
-    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/destroy`,
+    `https://api.cloudinary.com/v1_1/${account.cloudName}/image/destroy`,
     { method: 'POST', body: form },
   )
   if (!response.ok) return false

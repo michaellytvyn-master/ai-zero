@@ -36,6 +36,7 @@ const operatorKeysSchema = z.object({
   GROQ_API_KEY: z.string().optional(),
   CF_ACCOUNT_ID: z.string().optional(),
   CF_API_TOKEN: z.string().optional(),
+  GEMINI_API_KEY: z.string().optional(),
 })
 
 function slice<T extends z.ZodTypeAny>(schema: T, what: string) {

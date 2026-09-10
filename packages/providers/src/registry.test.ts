@@ -38,8 +38,16 @@ describe('resolveModel', () => {
 })
 
 describe('registry', () => {
-  it('runs Groq first, then Cloudflare', () => {
-    expect(orderedProviders().map((p) => p.id)).toEqual(['groq', 'cloudflare'])
+  it('runs strictly in priority order, whatever is registered', () => {
+    const order = orderedProviders()
+    // Asserted as a property rather than a fixed list, so registering a
+    // provider is not a test failure — only mis-ordering one is.
+    const priorities = order.map((provider) => provider.priority)
+    expect(priorities).toEqual([...priorities].sort((a, b) => a - b))
+    // Groq stays first: it is the fastest and the least encumbered.
+    expect(order[0]?.id).toBe('groq')
+    // Gemini stays last: its free tier is the only one that reads what you send.
+    expect(order[order.length - 1]?.id).toBe('gemini')
   })
 
   /**
@@ -78,7 +86,9 @@ describe('listModels', () => {
   it('offers every free model across every provider', () => {
     const choices = listModels()
 
-    expect(choices.length).toBe(groq.models.length + cloudflare.models.length)
+    expect(choices.length).toBe(
+      providers.reduce((total, provider) => total + provider.models.length, 0),
+    )
     expect(choices.every((choice) => choice.id.includes(':'))).toBe(true)
   })
 

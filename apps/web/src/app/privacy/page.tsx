@@ -1,9 +1,15 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { orderedProviders } from '@zca/providers'
 import { runtimeConfig } from '@/config'
 import { IMAGE_LIFETIME_MS } from '@/lib/images'
 
-export const metadata = { title: 'Privacy' }
+export const metadata: Metadata = {
+  title: 'Privacy',
+  description:
+    'What Zero-Cost AI stores, what it never stores, and how your provider keys are encrypted.',
+  alternates: { canonical: '/privacy' },
+}
 
 export default function PrivacyPage() {
   const trial = runtimeConfig().DEMO_MESSAGES_PER_ACCOUNT_PER_DAY
@@ -61,12 +67,45 @@ export default function PrivacyPage() {
         dashboard shows. It never includes the content of a prompt or a reply.
       </p>
 
+      <h2>What the provider does with it</h2>
+      <p>
+        This page can only speak for what happens here. Once a request leaves for the provider whose
+        key you added, their terms apply, and they are not all the same.
+      </p>
+      <ul className="muted">
+        <li>
+          <strong>Groq and Cloudflare</strong> reserve no right to train on what you send.
+        </li>
+        <li>
+          <strong>Google Gemini, on its free tier, does.</strong> Google&apos;s terms say it uses
+          what you submit and what comes back to develop its products, that human reviewers may read
+          it, and that you should not send sensitive, confidential or personal information. That
+          warning is shown again on the page where you paste the key, because it is the moment the
+          choice is made. Gemini is also last in the failover order, so it is reached only after the
+          other two.
+        </li>
+      </ul>
+
       <h2>Generated images</h2>
       <p>
-        Images are held by an image host and <strong>deleted an hour after they are made</strong>,
-        automatically. That is {Math.round(IMAGE_LIFETIME_MS / 60_000)} minutes, counted down under
-        each picture. Download anything you want to keep.
+        Where a picture is kept depends on whose account it went to, and the caption under each one
+        says which.
       </p>
+      <ul className="muted">
+        <li>
+          <strong>Our shared test pool</strong>, if you have not connected an account of your own:
+          the picture is{' '}
+          <strong>deleted {Math.round(IMAGE_LIFETIME_MS / 60_000)} minutes after it is made</strong>
+          , automatically, counted down under the picture. It is somewhere to try the feature, not
+          somewhere to keep anything. Download what you want.
+        </li>
+        <li>
+          <strong>Your own Cloudinary account</strong>, once you connect one in Settings: the
+          picture is written there and <strong>we never delete it</strong>. It sits in your account,
+          on your free tier, and only you can remove it. Disconnecting the account here leaves the
+          pictures where they are.
+        </li>
+      </ul>
 
       <h2>Voice input</h2>
       <p>

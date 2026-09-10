@@ -436,9 +436,41 @@ tbody tr:hover {
 }
 
 /* ---- chat ---- */
+/*
+ * A fixed height with min-height:0 on the panes, not min-height on the grid.
+ * Without min-height:0 a grid item refuses to shrink below its content, the
+ * inner overflow never engages, and the whole page scrolls instead.
+ */
+.chatlayout {
+  display: grid;
+  grid-template-columns: 236px 1fr;
+  height: calc(100dvh - 51px);
+  overflow: hidden;
+}
+.chatpane {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 22px 20px;
+  /* min-height:0 is what keeps this pane from growing; overflow stays visible
+     so a popover opening from the composer is not clipped by it. */
+  min-height: 0;
+}
+.chatlog {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 4px;
+  scroll-behavior: smooth;
+}
+
 .chatlist {
   border-right: 1px solid var(--border);
   padding: 14px 12px;
+  min-height: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -511,34 +543,148 @@ tbody tr:hover {
   display: none;
 }
 
-.composer-box {
+/* ---- the composer, as one bar ---- */
+.bar {
   display: flex;
-  align-items: flex-end;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 8px 7px 10px;
   border: 1px solid var(--border-bright);
-  border-radius: var(--radius);
-  padding: 9px 9px 9px 14px;
+  border-radius: 28px;
   background: var(--raised);
   transition:
     border-color 180ms var(--ease),
     box-shadow 180ms var(--ease);
 }
-.composer-box:focus-within {
+.bar:focus-within {
   border-color: var(--accent-dim);
   box-shadow: var(--glow-soft);
 }
-.composer-box textarea {
-  flex: 1;
+.bar textarea {
+  flex: 1 1 auto;
+  /* The global rule sets width:100%, which would fill the row and push every
+     control out of it. */
+  width: auto;
+  min-width: 0;
   border: none;
   outline: none;
   background: none;
   resize: none;
-  padding: 5px 0;
-  max-height: 220px;
+  padding: 8px 4px;
+  max-height: 180px;
+  line-height: 1.5;
   box-shadow: none;
 }
-.composer-box textarea:focus {
+.bar textarea:focus {
   box-shadow: none;
+}
+
+.bar .round {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  background: none;
+  border-color: transparent;
+  color: var(--muted);
+}
+.bar .round:hover:not(:disabled) {
+  background: var(--surface);
+  color: var(--accent);
+  border-color: var(--border);
+}
+.bar .round.on {
+  color: var(--accent);
+  background: var(--accent-ghost);
+  border-color: rgb(33 229 138 / 25%);
+}
+.bar .round.go {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #04140c;
+  box-shadow: var(--glow-soft);
+}
+.bar .round.go:hover:not(:disabled) {
+  box-shadow: var(--glow);
+}
+.bar .round.go:disabled {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--faint);
+  box-shadow: none;
+}
+
+.bar .tag {
+  flex: none;
+  padding: 6px 12px;
+  border-radius: 18px;
+  font-size: 13px;
+  background: none;
+  border-color: transparent;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.bar .tag:hover:not(:disabled) {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+}
+.bar .tag.on {
+  color: var(--accent);
+  background: var(--accent-ghost);
+  border-color: rgb(33 229 138 / 25%);
+}
+
+/* ---- popovers ---- */
+.pop {
+  position: relative;
+  display: inline-flex;
+}
+.pop > .sheet {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  right: 0;
+  z-index: 30;
+  min-width: 236px;
+  padding: 8px;
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius);
+  background: var(--raised);
+  box-shadow: 0 18px 44px rgb(0 0 0 / 55%);
+  animation: rise 160ms var(--ease);
+}
+.sheet .item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  justify-content: flex-start;
+  padding: 9px 11px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  font-size: 13.5px;
+  color: var(--text);
+}
+.sheet .item:hover:not(:disabled) {
+  background: var(--surface);
+  border-color: transparent;
+}
+.sheet .item.on {
+  color: var(--accent);
+}
+.sheet .item .check {
+  margin-left: auto;
+  color: var(--accent);
+}
+.sheet .divider-line {
+  height: 1px;
+  background: var(--border);
+  margin: 6px 4px;
+}
+.sheet label.field {
+  padding: 6px 8px 2px;
 }
 
 .attachments {
@@ -754,6 +900,19 @@ a.pill:hover {
   background: var(--surface);
   padding: 12px 14px 10px;
   min-width: 280px;
+
+  /* One source of truth for where the ends of the scale sit. The dots' padding
+     and the knob's travel are both derived from it, so they cannot drift apart
+     — they did, and the knob sat on 0 while the first dot sat 13.5px in, which
+     put the knob half outside the track. */
+  --dot: 5px;
+  --knob: 20px;
+  --track-border: 1px;
+  /* Measured from the edge of .track-wrap, which is what the knob is
+     positioned against. The dots sit inside the track's border, so their
+     padding subtracts it — without that the knob missed the end dots by
+     exactly one pixel. */
+  --inset: 14.5px;
 }
 .effort .ends {
   margin-top: 8px;
@@ -769,15 +928,15 @@ a.pill:hover {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 11px;
+  padding: 0 calc(var(--inset) - var(--track-border) - var(--dot) / 2);
   border-radius: 999px;
   background: var(--raised);
-  border: 1px solid var(--border);
+  border: var(--track-border) solid var(--border);
   pointer-events: none;
 }
 .effort .dot {
-  width: 5px;
-  height: 5px;
+  width: var(--dot);
+  height: var(--dot);
   border-radius: 50%;
   background: var(--faint);
   transition:
@@ -791,9 +950,12 @@ a.pill:hover {
 .effort .knob {
   position: absolute;
   top: 3px;
-  width: 20px;
-  height: 20px;
-  margin-left: -10px;
+  width: var(--knob);
+  height: var(--knob);
+  /* Travels between the first and last dot centres rather than the track's own
+     edges, and is then pulled back by half its width to sit on them. */
+  left: calc(var(--inset) + var(--at, 0) * (100% - var(--inset) * 2));
+  margin-left: calc(var(--knob) / -2);
   border-radius: 50%;
   background: var(--accent);
   box-shadow: var(--glow);
@@ -826,4 +988,1008 @@ a.pill:hover {
   box-shadow:
     var(--glow),
     0 0 0 3px var(--accent-ghost);
+}
+
+.bar .round.recording {
+  color: var(--danger);
+  background: var(--danger-ghost);
+  border-color: var(--danger);
+}
+
+/* ==========================================================================
+   Landing page.
+   Everything here is prefixed `l-`. The page shares a stylesheet with the app,
+   and the last collision — a landing `.pill` silently overriding the composer —
+   cost an afternoon.
+   ========================================================================== */
+
+@keyframes l-aura {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: translate(-50%, 0) scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: translate(-50%, -18px) scale(1.08);
+  }
+}
+@keyframes l-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-9px);
+  }
+}
+@keyframes l-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes l-slide {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes l-blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.l-in {
+  animation: l-in 700ms var(--ease) both;
+}
+
+/* ---- hero ---- */
+.l-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 86px 22px 40px;
+  text-align: center;
+}
+.l-hero::before {
+  content: "";
+  position: absolute;
+  top: -260px;
+  left: 50%;
+  width: 900px;
+  height: 620px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(33 229 138 / 20%), transparent 72%);
+  filter: blur(28px);
+  animation: l-aura 9s ease-in-out infinite;
+  pointer-events: none;
+}
+/* Faint grid, so the black is a surface rather than a void. */
+.l-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 58px 58px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 25%, #000 0%, transparent 100%);
+  opacity: 0.4;
+  pointer-events: none;
+}
+.l-hero > * {
+  position: relative;
+  z-index: 1;
+}
+.l-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 13px 5px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border-bright);
+  background: rgb(13 15 18 / 70%);
+  backdrop-filter: blur(6px);
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-bottom: 26px;
+}
+.l-badge b {
+  color: var(--accent);
+  font-weight: 600;
+}
+.l-badge .l-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: var(--glow);
+  animation: l-blink 2.4s ease-in-out infinite;
+}
+.l-title {
+  font-size: clamp(38px, 7vw, 72px);
+  line-height: 1.03;
+  letter-spacing: -0.045em;
+  margin: 0 0 18px;
+  font-weight: 700;
+}
+.l-title em {
+  font-style: normal;
+  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-dim) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 60px rgb(33 229 138 / 35%);
+}
+.l-lead {
+  font-size: clamp(16px, 2vw, 19px);
+  color: var(--muted);
+  max-width: 660px;
+  margin: 0 auto 32px;
+  line-height: 1.6;
+}
+.l-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+}
+.l-cta button {
+  padding: 11px 22px;
+  font-size: 15px;
+}
+.l-cta .primary {
+  box-shadow: var(--glow);
+}
+.l-fine {
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--faint);
+}
+.l-fine b {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* ---- product mock ---- */
+.l-mockwrap {
+  position: relative;
+  max-width: 880px;
+  margin: 54px auto 0;
+  padding: 0 22px;
+  perspective: 1400px;
+}
+.l-mock {
+  border: 1px solid var(--border-bright);
+  border-radius: 18px;
+  background: linear-gradient(180deg, var(--surface), var(--bg));
+  box-shadow:
+    0 40px 90px -30px rgb(0 0 0 / 90%),
+    0 0 70px -20px rgb(33 229 138 / 18%);
+  overflow: hidden;
+  text-align: left;
+  animation: l-float 7s ease-in-out infinite;
+}
+.l-mock .l-chrome {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  background: rgb(255 255 255 / 2%);
+}
+.l-mock .l-chrome i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--border-bright);
+}
+.l-mock .l-chrome span {
+  margin-left: 8px;
+  font-size: 11.5px;
+  color: var(--faint);
+}
+.l-mock .l-body {
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.l-msg {
+  max-width: 74%;
+  padding: 11px 14px;
+  border-radius: 14px;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+.l-msg.you {
+  align-self: flex-end;
+  background: var(--accent-ghost);
+  border: 1px solid var(--accent-dim);
+  color: var(--text);
+}
+.l-msg.ai {
+  align-self: flex-start;
+  background: var(--raised);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.l-msg .l-src {
+  display: block;
+  margin-top: 7px;
+  font-size: 11px;
+  color: var(--accent);
+}
+.l-mockbar {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 4px 20px 20px;
+  padding: 9px 10px 9px 12px;
+  border: 1px solid var(--border-bright);
+  border-radius: 999px;
+  background: var(--raised);
+  font-size: 13px;
+  color: var(--faint);
+}
+.l-mockbar .l-grow {
+  flex: 1;
+}
+.l-mockbar .l-round {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border-bright);
+  color: var(--muted);
+  font-size: 13px;
+}
+.l-mockbar .l-round.go {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #04140c;
+  box-shadow: var(--glow);
+}
+
+/* ---- provider strip ---- */
+.l-strip {
+  margin-top: 64px;
+  padding: 22px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+.l-strip .l-track {
+  display: flex;
+  width: max-content;
+  gap: 46px;
+  animation: l-slide 26s linear infinite;
+}
+.l-strip span {
+  font-size: 13px;
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+/* ---- stats ---- */
+.l-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.l-stats div {
+  background: var(--bg);
+  padding: 30px 22px;
+  text-align: center;
+}
+.l-stats strong {
+  display: block;
+  font-size: clamp(26px, 4vw, 36px);
+  letter-spacing: -0.04em;
+  color: var(--accent);
+  text-shadow: var(--glow-soft);
+}
+.l-stats small {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+/* ---- section shell ---- */
+.l-sec {
+  padding: 84px 22px;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+.l-eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 12px;
+}
+.l-h2 {
+  font-size: clamp(25px, 3.6vw, 38px);
+  letter-spacing: -0.035em;
+  margin: 0 0 14px;
+  max-width: 22ch;
+}
+.l-sub {
+  color: var(--muted);
+  max-width: 62ch;
+  margin: 0 0 40px;
+  font-size: 15.5px;
+}
+.l-center {
+  text-align: center;
+}
+.l-center .l-h2,
+.l-center .l-sub {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ---- bento ---- */
+.l-bento {
+  display: grid;
+  /* minmax(0, …) rather than 1fr: a plain fr track floors at min-content, and
+     the code sample's min-content is wider than a phone. */
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px;
+}
+.l-card {
+  grid-column: span 2;
+  min-width: 0;
+  position: relative;
+  padding: 24px 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, var(--surface), rgb(13 15 18 / 40%));
+  transition:
+    border-color 220ms var(--ease),
+    transform 220ms var(--ease),
+    box-shadow 220ms var(--ease);
+}
+.l-card:hover {
+  border-color: var(--accent-dim);
+  transform: translateY(-3px);
+  box-shadow: var(--glow-soft);
+}
+.l-card.wide {
+  grid-column: span 3;
+}
+.l-card.full {
+  grid-column: span 6;
+}
+.l-card h3 {
+  margin: 12px 0 8px;
+  font-size: 16.5px;
+}
+.l-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.l-ico {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: var(--accent-ghost);
+  border: 1px solid var(--accent-dim);
+  color: var(--accent);
+}
+@media (width <= 900px) {
+  .l-bento {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .l-card,
+  .l-card.wide,
+  .l-card.full {
+    grid-column: span 2;
+  }
+}
+
+/* ---- code sample ---- */
+.l-code {
+  margin: 16px 0 0;
+  padding: 15px 17px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #05060700;
+  background-color: #050607;
+  overflow-x: auto;
+  font:
+    12.5px / 1.75 ui-monospace,
+    "SF Mono",
+    Menlo,
+    monospace;
+  color: var(--muted);
+  white-space: pre;
+}
+.l-code {
+  max-width: 100%;
+}
+.l-code b {
+  color: var(--accent);
+  font-weight: 500;
+}
+.l-code i {
+  color: var(--faint);
+  font-style: normal;
+}
+
+/* ---- steps ---- */
+.l-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 26px;
+  counter-reset: l-step;
+}
+.l-stepcard {
+  position: relative;
+  padding-top: 26px;
+  border-top: 1px solid var(--border);
+}
+.l-stepcard::before {
+  counter-increment: l-step;
+  content: "0" counter(l-step);
+  position: absolute;
+  top: -1px;
+  left: 0;
+  padding-right: 12px;
+  background: var(--bg);
+  transform: translateY(-50%);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+}
+.l-stepcard h3 {
+  margin: 0 0 8px;
+  font-size: 16.5px;
+}
+.l-stepcard p {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* ---- contrast pair ---- */
+.l-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+.l-pair > div {
+  padding: 26px 24px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.l-pair .is {
+  border-color: var(--accent-dim);
+  box-shadow: var(--glow-soft);
+}
+.l-pair h3 {
+  margin: 0 0 10px;
+  font-size: 16.5px;
+}
+.l-pair .is h3 {
+  color: var(--accent);
+}
+.l-pair p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+/* ---- models ---- */
+.l-provider {
+  padding: 20px 0;
+  border-top: 1px solid var(--border);
+}
+.l-provider .l-phead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.l-provider .l-phead strong {
+  font-size: 15px;
+}
+.l-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 7px;
+  background: var(--raised);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 6px 6px 0;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+.l-tag b {
+  color: var(--faint);
+  font-weight: 400;
+}
+.l-yours {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--accent-ghost);
+  border: 1px solid var(--accent-dim);
+  color: var(--accent);
+  font-size: 11.5px;
+}
+
+/* ---- faq ---- */
+.l-faq details {
+  border-bottom: 1px solid var(--border);
+}
+.l-faq summary {
+  padding: 19px 34px 19px 0;
+  cursor: pointer;
+  list-style: none;
+  position: relative;
+  font-size: 15.5px;
+  font-weight: 500;
+  transition: color 180ms var(--ease);
+}
+.l-faq summary::-webkit-details-marker {
+  display: none;
+}
+.l-faq summary:hover {
+  color: var(--accent);
+}
+.l-faq summary::after {
+  content: "+";
+  position: absolute;
+  right: 4px;
+  top: 17px;
+  color: var(--accent);
+  font-size: 18px;
+  transition: transform 220ms var(--ease);
+}
+.l-faq details[open] summary::after {
+  transform: rotate(45deg);
+}
+.l-faq p {
+  margin: 0 0 20px;
+  color: var(--muted);
+  font-size: 14.5px;
+  line-height: 1.7;
+  max-width: 70ch;
+  animation: l-in 320ms var(--ease) both;
+}
+
+/* ---- final call ---- */
+.l-final {
+  position: relative;
+  overflow: hidden;
+  margin: 0 22px 80px;
+  padding: 74px 26px;
+  text-align: center;
+  border: 1px solid var(--border-bright);
+  border-radius: 22px;
+  background: linear-gradient(180deg, var(--surface), var(--bg));
+}
+.l-final::before {
+  content: "";
+  position: absolute;
+  bottom: -220px;
+  left: 50%;
+  width: 760px;
+  height: 420px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(33 229 138 / 22%), transparent 70%);
+  filter: blur(26px);
+  pointer-events: none;
+}
+.l-final > * {
+  position: relative;
+}
+
+/* ---- footer ---- */
+.l-foot {
+  border-top: 1px solid var(--border);
+  padding: 26px 22px 40px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--faint);
+  max-width: 1080px;
+  margin: 0 auto;
+}
+.l-foot a {
+  color: var(--muted);
+}
+.l-foot .spacer {
+  flex: 1;
+}
+
+/* ==========================================================================
+   Mobile.
+   Three navigations become drawers below 860px: the top bar, the conversation
+   list in the chat, and the settings side nav. They share the scrim and the
+   transform, and differ only in which edge they come from.
+   ========================================================================== */
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.burger {
+  display: none;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  border: 0;
+  padding: 0;
+  background: rgb(4 5 6 / 66%);
+  backdrop-filter: blur(3px);
+  animation: fade-in 180ms var(--ease);
+}
+
+/* Off-canvas panels. Kept mounted so their scroll position survives a close. */
+.drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  z-index: 40;
+  width: min(84vw, 310px);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  transition:
+    transform 260ms var(--ease),
+    visibility 260ms var(--ease);
+  overscroll-behavior: contain;
+  /* Parked off-screen a panel still takes part in the layout: its links stay
+     focusable and its width is added to the document's. Hiding it fixes both,
+     and `visibility` still animates, so the slide is unaffected. */
+  visibility: hidden;
+}
+.drawer.open {
+  visibility: visible;
+}
+.drawer.right {
+  right: 0;
+  left: auto;
+  border-right: 0;
+  border-left: 1px solid var(--border);
+}
+
+@media (width <= 860px) {
+  /* ---- top bar ---- */
+  .nav {
+    gap: 12px;
+    padding: 11px 15px;
+  }
+  .nav .desk {
+    display: none;
+  }
+  .burger {
+    display: grid;
+  }
+  .navdrawer {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 68px 16px 20px;
+    transform: translateX(100%);
+    overflow-y: auto;
+  }
+  .navdrawer.open {
+    transform: none;
+  }
+  .navdrawer a {
+    padding: 12px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 16px;
+    color: var(--text);
+  }
+  .navdrawer a:hover {
+    background: var(--raised);
+    text-decoration: none;
+  }
+  .navdrawer .who {
+    padding: 12px;
+    font-size: 13px;
+    color: var(--faint);
+    border-top: 1px solid var(--border);
+    margin-top: 8px;
+    overflow-wrap: anywhere;
+  }
+  .navdrawer button {
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  /* ---- chat ---- */
+  .chatlayout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .chatlist {
+    visibility: hidden;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 40;
+    width: min(84vw, 300px);
+    background: var(--surface);
+    padding-top: 62px;
+    transform: translateX(-100%);
+    transition: transform 260ms var(--ease);
+    overscroll-behavior: contain;
+  }
+  .chatlist.open {
+    visibility: visible;
+    transform: none;
+  }
+  .chatpane {
+    padding: 12px 13px 14px;
+  }
+  /* Full-width bubbles read better than 74% on a narrow screen. */
+  .turn-card {
+    max-width: 100%;
+  }
+
+  /* ---- settings ---- */
+  .dash {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dash nav.side {
+    visibility: hidden;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 40;
+    width: min(84vw, 280px);
+    background: var(--surface);
+    padding-top: 62px;
+    transform: translateX(-100%);
+    transition: transform 260ms var(--ease);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .dash nav.side.open {
+    visibility: visible;
+    transform: none;
+  }
+  .dash > section {
+    padding: 16px 15px 40px;
+  }
+
+  /* ---- shared shells ---- */
+  .wrap {
+    padding: 22px 15px 40px;
+  }
+  .tiles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .card {
+    padding: 15px 15px;
+  }
+  /* Analytics tables are wide by nature; let them scroll rather than squash. */
+  .tablewrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tablewrap table {
+    min-width: 560px;
+  }
+
+  /* ---- composer ---- */
+  .bar {
+    gap: 6px;
+    padding: 6px 6px 6px 9px;
+  }
+  /* Anchored to the composer rather than to the tiny button, so the panel gets
+     the full width of the bar and always clears it — a fixed offset in pixels
+     would sit on top of the bar as soon as the textarea grew a second line.
+     The selector has to out-specify `.pop > .sheet` to win at all. */
+  .bar {
+    position: relative;
+  }
+  .pop {
+    position: static;
+  }
+  .pop > .sheet {
+    left: 0;
+    right: 0;
+    bottom: calc(100% + 10px);
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    max-height: 55vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .effort {
+    min-width: 0;
+  }
+
+  /* ---- landing ---- */
+  .l-hero {
+    padding: 54px 16px 30px;
+  }
+  .l-sec {
+    padding: 56px 16px;
+  }
+  .l-bento {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .l-card,
+  .l-card.wide,
+  .l-card.full {
+    grid-column: span 1;
+  }
+  .l-mockwrap {
+    margin-top: 38px;
+    padding: 0 4px;
+  }
+  .l-mock .l-body {
+    padding: 16px 14px;
+  }
+  .l-msg {
+    max-width: 88%;
+  }
+  .l-mockbar {
+    margin: 4px 14px 14px;
+  }
+  .l-final {
+    margin: 0 16px 56px;
+    padding: 52px 18px;
+  }
+  .l-cta button {
+    width: 100%;
+  }
+  .l-cta a {
+    width: 100%;
+  }
+  .l-stats div {
+    padding: 22px 12px;
+  }
+  .l-foot {
+    padding: 22px 16px 34px;
+  }
+}
+
+/* Touch targets and the smallest phones. */
+@media (width <= 420px) {
+  .l-title {
+    font-size: 34px;
+  }
+  .l-badge {
+    font-size: 11.5px;
+  }
+  .l-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .nav a:first-child {
+    font-size: 15px;
+  }
+}
+
+/* Drawers are a small-screen affordance; never leave one open on resize. */
+@media (width >= 861px) {
+  .scrim,
+  .navdrawer {
+    display: none;
+  }
+  /* Back to being plain grid columns, not parked panels. */
+  .chatlist,
+  .dash nav.side {
+    visibility: visible;
+  }
+}
+
+/* The bar that opens the settings drawer; it is the first grid cell, and is
+   removed from the grid entirely above 860px. */
+.dashbar {
+  display: none;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 15px;
+  border-bottom: 1px solid var(--border);
+}
+@media (width <= 860px) {
+  .dashbar {
+    display: flex;
+  }
+}
+
+/* ---- reasoning ----
+   The model's working-out. Deliberately quieter than the answer: smaller,
+   dimmer and monospaced, so a glance separates thought from conclusion. */
+.reasoning {
+  margin: 0 0 10px;
+  border-left: 2px solid var(--border-bright);
+  padding-left: 11px;
+}
+.reasoning .head {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--faint);
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: color 160ms var(--ease);
+}
+.reasoning .head:hover {
+  color: var(--muted);
+}
+.reasoning .caret {
+  display: inline-block;
+  transition: transform 200ms var(--ease);
+}
+.reasoning.open .caret {
+  transform: rotate(90deg);
+}
+.reasoning .head .spin {
+  width: 10px;
+  height: 10px;
+  border-width: 1.5px;
+  color: var(--accent);
+}
+.reasoning .body {
+  margin-top: 6px;
+  max-height: 190px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font:
+    12px / 1.65 ui-monospace,
+    "SF Mono",
+    Menlo,
+    monospace;
+  color: var(--faint);
+}
+
+/* A provider-specific caution, shown before the key field rather than buried in
+   the privacy page: it is the moment the choice is actually being made. */
+.warn {
+  margin: 10px 0 0;
+  padding: 9px 12px;
+  border: 1px solid var(--border-bright);
+  border-left: 2px solid var(--danger);
+  border-radius: var(--radius-sm);
+  background: var(--danger-ghost);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
 }

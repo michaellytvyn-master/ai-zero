@@ -6,14 +6,15 @@ import { useRef, useState } from 'react'
 import type { ModelChoice } from '@zca/providers'
 import ConversationList from './conversation-list'
 import MessageLog from './message-log'
-import { type Attachment, asAttachmentMessage } from '@zca/shared'
+import { type Attachment, MENU, asAttachmentMessage } from '@zca/shared'
 import { streamChatTurn } from '@/lib/chat-stream'
 import { generateImage } from '@/lib/generate-image'
-import ChatControls from './chat-controls'
 import { useRememberedMode } from './use-remembered-mode'
 import Composer from './composer'
-import { type Turn, appendToLast, replaceLast } from './turn'
+import { type Turn, appendReasoningToLast, appendToLast, replaceLast } from './turn'
 import KeyPrompt from './key-prompt'
+import { contentLength, useStickToBottom } from './use-stick-to-bottom'
+import Icon from './icon'
 
 interface SignupOption {
   providerId: string
@@ -46,6 +47,11 @@ export default function ChatClient(props: {
   const [files, setFiles] = useState<Attachment[]>([])
   const [remaining, setRemaining] = useState(props.demoRemaining)
   const [model, setModel] = useState(props.initialModel)
+  // Conversation drawer, below 860px only.
+  const [drawer, setDrawer] = useState(false)
+
+  const log = useRef<HTMLDivElement>(null)
+  useStickToBottom(log, contentLength(turns))
   const [mode, chooseMode] = useRememberedMode()
   const conversationId = useRef<string | null>(props.activeId)
 
@@ -108,6 +114,7 @@ export default function ChatClient(props: {
           spent = true
         },
         onDelta: (chunk) => setTurns((previous) => appendToLast(previous, chunk)),
+        onReasoning: (chunk) => setTurns((previous) => appendReasoningToLast(previous, chunk)),
         onExhausted: (options) => {
           setNeedsKey(options)
           setRemaining(0)
@@ -125,17 +132,34 @@ export default function ChatClient(props: {
     router.refresh()
   }
   return (
-    <main
-      style={{ display: 'grid', gridTemplateColumns: '220px 1fr', minHeight: 'calc(100vh - 52px)' }}
-    >
+    <main className="chatlayout">
       <ConversationList
         conversations={props.conversations}
         nextCursor={props.nextCursor}
         activeId={props.activeId}
+        open={drawer}
+        onNavigate={() => setDrawer(false)}
       />
+      {drawer && (
+        <button
+          type="button"
+          className="scrim"
+          aria-label="Close conversations"
+          onClick={() => setDrawer(false)}
+        />
+      )}
 
-      <section style={{ display: 'flex', flexDirection: 'column', padding: 20, gap: 14 }}>
+      <section className="chatpane">
         <div className="row muted" style={{ fontSize: 13 }}>
+          <button
+            type="button"
+            className="burger"
+            aria-label="Open conversations"
+            aria-expanded={drawer}
+            onClick={() => setDrawer(true)}
+          >
+            <Icon shape={MENU} size={17} />
+          </button>
           {provider !== null && <span>answered by {provider}</span>}
           {!props.usingOwnKeys && remaining !== null && (
             <span>
@@ -146,12 +170,19 @@ export default function ChatClient(props: {
           {props.usingOwnKeys && <span>running on your own keys</span>}
         </div>
 
-        <MessageLog turns={turns} busy={busy} />
+        <MessageLog turns={turns} busy={busy} logRef={log} />
 
         {needsKey !== null && <KeyPrompt providers={needsKey} />}
         {error !== null && <p className="error">{error}</p>}
 
-        <ChatControls
+        <Composer
+          draft={draft}
+          onDraft={setDraft}
+          onSend={() => void send()}
+          busy={busy}
+          files={files}
+          onFiles={setFiles}
+          onError={setError}
           mode={mode}
           onMode={chooseMode}
           models={props.models}
@@ -162,16 +193,6 @@ export default function ChatClient(props: {
           onMakeImage={setMakeImage}
           searchWeb={searchWeb}
           onSearchWeb={setSearchWeb}
-        />
-
-        <Composer
-          draft={draft}
-          onDraft={setDraft}
-          onSend={() => void send()}
-          busy={busy}
-          files={files}
-          onFiles={setFiles}
-          onError={setError}
         />
       </section>
     </main>

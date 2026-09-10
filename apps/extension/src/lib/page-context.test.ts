@@ -12,8 +12,20 @@ const page: PageContext = {
 }
 
 const models = [
-  { id: 'groq:big', label: 'Big', providerLabel: 'Groq', contextWindow: 131072 },
-  { id: 'cf:small', label: 'Small', providerLabel: 'Cloudflare', contextWindow: 7968 },
+  {
+    id: 'groq:big',
+    label: 'Big',
+    providerId: 'groq',
+    providerLabel: 'Groq',
+    contextWindow: 131072,
+  },
+  {
+    id: 'cf:small',
+    label: 'Small',
+    providerId: 'cf',
+    providerLabel: 'Cloudflare',
+    contextWindow: 7968,
+  },
 ]
 
 describe('asContextMessage', () => {
@@ -62,7 +74,7 @@ describe('contextCharBudget', () => {
     expect(contextCharBudget([], 'auto')).toBeGreaterThanOrEqual(2000)
     expect(
       contextCharBudget(
-        [{ id: 'x', label: 'x', providerLabel: 'x', contextWindow: 10_000_000 }],
+        [{ id: 'x', label: 'x', providerId: 'x', providerLabel: 'x', contextWindow: 10_000_000 }],
         'x',
       ),
     ).toBeLessThanOrEqual(120_000)

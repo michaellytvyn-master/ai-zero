@@ -3,8 +3,10 @@ import {
   type Transcriber,
   createGroqTranscriber,
   smallestFreeModelId,
+  GEMINI_BASE_URL,
   GROQ_BASE_URL,
   createCloudflare,
+  createGemini,
   createGroq,
   type Provider,
 } from '@zca/providers'
@@ -24,10 +26,18 @@ export function transcriber(): Transcriber {
   return createGroqTranscriber(process.env.GROQ_BASE_URL ?? GROQ_BASE_URL)
 }
 
+/**
+ * Rebuilt rather than taken from the registry so each base URL can be pointed
+ * at a stub in tests. Every provider in the registry must appear here: one that
+ * does not is offered by the model picker and then rejected by the router with
+ * "no configured provider serves it", which is what happened when Gemini was
+ * added. `router-deps.test.ts` now fails if the two lists diverge.
+ */
 export function allProviders(): readonly Provider[] {
   return [
     createGroq(process.env.GROQ_BASE_URL ?? GROQ_BASE_URL),
     createCloudflare(process.env.CLOUDFLARE_API_ROOT ?? CLOUDFLARE_API_ROOT),
+    createGemini(process.env.GEMINI_BASE_URL ?? GEMINI_BASE_URL),
   ].sort((a, b) => a.priority - b.priority)
 }
 
@@ -62,7 +72,10 @@ export async function buildRouterContext(
   source: UsageEvent['source'],
 ): Promise<RouterContext> {
   const userKeys = await decryptedKeys(userId)
-  const usingOwnKeys = userKeys.size > 0
+  // Counted across model providers only. The vault also holds a Cloudinary
+  // credential for image storage, and connecting somewhere to keep pictures
+  // must not silently take a user off the shared model pool.
+  const usingOwnKeys = allProviders().some((provider) => userKeys.has(provider.id))
 
   const keyFor = (provider: Provider): ProviderKey | null => {
     if (usingOwnKeys) {

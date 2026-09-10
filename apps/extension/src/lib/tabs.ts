@@ -9,6 +9,8 @@ export interface TabChat {
   readonly pageMode: PageMode
   readonly responseMode: ResponseMode
   readonly searchWeb: boolean
+  /** Acting on the page rather than answering about it. Off by default. */
+  readonly act: boolean
   /**
    * A reply still arriving when the panel was torn down. Chrome destroys the
    * document as soon as the user leaves the tab, and the answer only reaches
@@ -27,6 +29,7 @@ export const EMPTY_TAB_CHAT: TabChat = {
   pageMode: 'text',
   responseMode: DEFAULT_RESPONSE_MODE,
   searchWeb: false,
+  act: false,
   pendingAnswer: null,
   pendingAnsweredBy: null,
 }

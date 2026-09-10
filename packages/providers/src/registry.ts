@@ -1,9 +1,10 @@
 import { cloudflare } from './cloudflare'
+import { gemini } from './gemini'
 import { groq, groqTranscriber } from './groq'
 import type { Transcriber } from './transcription'
 import type { Provider } from './types'
 
-export const providers: readonly Provider[] = [groq, cloudflare]
+export const providers: readonly Provider[] = [groq, cloudflare, gemini]
 
 export function orderedProviders(): readonly Provider[] {
   return [...providers].sort((a, b) => a.priority - b.priority)

@@ -1,6 +1,7 @@
 export interface ImageResult {
   readonly url: string
-  readonly expiresAt: string
+  /** Null when the picture went to the user's own account and is kept. */
+  readonly expiresAt: string | null
   readonly model: string
   readonly lifetimeMinutes: number
 }

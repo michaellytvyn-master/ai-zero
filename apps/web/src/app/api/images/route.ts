@@ -7,7 +7,8 @@ import {
 } from '@zca/providers'
 import { z } from 'zod'
 import { runtimeConfig } from '@/config'
-import { CloudinaryNotConfigured, isCloudinaryConfigured, uploadImage } from '@/lib/cloudinary'
+import { CloudinaryNotConfigured, uploadImage } from '@/lib/cloudinary'
+import { imageDestination } from '@/lib/image-store'
 import { appendMessage } from '@/lib/conversations'
 import { IMAGE_LIFETIME_MS, recordImage } from '@/lib/images'
 import { decryptedKeys } from '@/lib/provider-keys'
@@ -37,16 +38,25 @@ export async function POST(request: Request): Promise<Response> {
   const slot = await claimRequestSlot(user.id)
   if (!slot.allowed) return tooManyRequests(slot)
 
-  if (!isCloudinaryConfigured()) {
-    return Response.json(
-      { error: { type: 'unconfigured', message: 'Image storage is not set up on this server.' } },
-      { status: 501 },
-    )
-  }
-
   const parsed = schema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) {
     return Response.json({ error: { type: 'invalid_request' } }, { status: 400 })
+  }
+
+  // Their own account if they connected one, otherwise the shared test pool.
+  const destination = await imageDestination(user.id)
+  if (destination === null) {
+    return Response.json(
+      {
+        error: {
+          type: 'unconfigured',
+          message:
+            'Image storage is not set up on this server. Connect your own Cloudinary account in ' +
+            'Settings to keep generated pictures in it.',
+        },
+      },
+      { status: 501 },
+    )
   }
 
   const own = (await decryptedKeys(user.id)).get('cloudflare')
@@ -85,7 +95,10 @@ export async function POST(request: Request): Promise<Response> {
       { prompt: parsed.data.prompt, model, accountId, token, apiRoot: CLOUDFLARE_API_ROOT },
       request.signal,
     )
-    const stored = await uploadImage(image.bytes, `zca/${user.id}`, request.signal)
+    // A user's own account gets a plain folder; the shared pool keeps the user
+    // id so one person's pictures can be found and swept without the others.
+    const folder = destination.storage === 'user' ? 'zero-cost-ai' : `zca/${user.id}`
+    const stored = await uploadImage(image.bytes, folder, request.signal, destination.account)
     const row = await recordImage({
       userId: user.id,
       conversationId: parsed.data.conversationId ?? null,
@@ -93,6 +106,7 @@ export async function POST(request: Request): Promise<Response> {
       url: stored.url,
       model,
       bytes: stored.bytes,
+      storage: destination.storage,
     })
 
     if (parsed.data.conversationId !== undefined) {
@@ -108,8 +122,11 @@ export async function POST(request: Request): Promise<Response> {
       id: row.id,
       url: row.url,
       model,
-      expiresAt: row.expiresAt.toISOString(),
+      // Null says "this one is yours and is kept", which the caption renders
+      // instead of a countdown.
+      expiresAt: row.expiresAt?.toISOString() ?? null,
       lifetimeMinutes: Math.round(IMAGE_LIFETIME_MS / 60_000),
+      storage: row.expiresAt === null ? 'user' : 'operator',
     })
   } catch (error) {
     if (error instanceof ImagePromptError) {

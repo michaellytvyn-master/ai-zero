@@ -1,9 +1,19 @@
+import type { RefObject } from 'react'
 import GeneratedImage from './generated-image'
+import ReasoningBlock from './reasoning-block'
 import type { Turn } from './turn'
 
-export default function MessageLog({ turns, busy }: { turns: Turn[]; busy: boolean }) {
+export default function MessageLog({
+  turns,
+  busy,
+  logRef,
+}: {
+  turns: Turn[]
+  busy: boolean
+  logRef: RefObject<HTMLDivElement | null>
+}) {
   return (
-    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className="chatlog" ref={logRef}>
       {turns.map((turn, index) => (
         <div key={turn.id} className={`turn-card ${turn.role}`}>
           <div className="who">
@@ -11,6 +21,9 @@ export default function MessageLog({ turns, busy }: { turns: Turn[]; busy: boole
             {turn.provider != null && ` · ${turn.provider}`}
             {turn.model != null && ` · ${turn.model}`}
           </div>
+          {turn.reasoning !== undefined && turn.reasoning.length > 0 && (
+            <ReasoningBlock text={turn.reasoning} answered={turn.content.length > 0} />
+          )}
           {turn.image != null ? (
             <GeneratedImage
               url={turn.image.url}
@@ -19,7 +32,7 @@ export default function MessageLog({ turns, busy }: { turns: Turn[]; busy: boole
             />
           ) : (
             turn.content ||
-            (busy && index === turns.length - 1 ? (
+            (busy && index === turns.length - 1 && (turn.reasoning ?? '') === '' ? (
               <span className="typing" role="status" aria-label="Thinking">
                 <i />
                 <i />

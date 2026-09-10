@@ -1,6 +1,8 @@
 import { z } from 'zod'
 import { providerById } from '@zca/providers'
 import { UnauthenticatedError, requireUser } from '@/auth'
+import { CloudinaryCredentialError, parseCloudinaryCredential } from '@/lib/cloudinary'
+import { CLOUDINARY_KEY_ID } from '@/lib/image-store'
 import { deleteProviderKey, listProviderKeys, saveProviderKey } from '@/lib/provider-keys'
 import { unauthenticatedResponse } from '@/lib/responses'
 
@@ -28,7 +30,18 @@ export async function POST(request: Request): Promise<Response> {
     const user = await requireUser()
     const parsed = saveSchema.safeParse(await request.json().catch(() => null))
     if (!parsed.success) return badRequest(parsed.error.issues[0]?.message ?? 'invalid body')
-    if (providerById(parsed.data.providerId) === undefined) return badRequest('unknown provider')
+    // Image storage lives in the same vault but is not a model provider, so it
+    // is accepted explicitly rather than by falling through the provider check.
+    if (parsed.data.providerId === CLOUDINARY_KEY_ID) {
+      try {
+        parseCloudinaryCredential(parsed.data.key)
+      } catch (error) {
+        if (error instanceof CloudinaryCredentialError) return badRequest(error.message)
+        throw error
+      }
+    } else if (providerById(parsed.data.providerId) === undefined) {
+      return badRequest('unknown provider')
+    }
 
     await saveProviderKey(user.id, parsed.data.providerId, parsed.data.key)
     return Response.json({ keys: await listProviderKeys(user.id) })

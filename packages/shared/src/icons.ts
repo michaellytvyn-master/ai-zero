@@ -75,3 +75,52 @@ export const SPARKLE: IconShape = {
     'M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z',
   ],
 }
+
+export const SHIELD: IconShape = {
+  viewBox: '0 0 24 24',
+  paths: [
+    'M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z',
+  ],
+}
+
+export const SHUFFLE: IconShape = {
+  viewBox: '0 0 24 24',
+  paths: [
+    'm18 14 4 4-4 4',
+    'm18 2 4 4-4 4',
+    'M2 18h1.973a4 4 0 0 0 3.3-1.7l5.454-8.6a4 4 0 0 1 3.3-1.7H22',
+    'M2 6h1.972a4 4 0 0 1 3.6 2.2',
+    'M22 18h-6.041a4 4 0 0 1-3.3-1.8l-.359-.45',
+  ],
+}
+
+export const SIDEBAR: IconShape = {
+  viewBox: '0 0 24 24',
+  paths: ['M15 3v18'],
+  rects: [{ x: 3, y: 3, width: 18, height: 18, rx: 2 }],
+}
+
+export const CODE: IconShape = {
+  viewBox: '0 0 24 24',
+  paths: ['m16 18 6-6-6-6', 'm8 6-6 6 6 6'],
+}
+
+/** The circle is written as a path so IconShape needs no new primitive. */
+export const GLOBE: IconShape = {
+  viewBox: '0 0 24 24',
+  paths: [
+    'M12 2a10 10 0 1 0 0 20 10 10 0 1 0 0-20',
+    'M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20',
+    'M2 12h20',
+  ],
+}
+
+export const GAUGE: IconShape = {
+  viewBox: '0 0 24 24',
+  paths: ['m12 14 4-4', 'M3.34 19a10 10 0 1 1 17.32 0'],
+}
+
+export const MENU: IconShape = {
+  viewBox: '0 0 24 24',
+  paths: ['M4 6h16', 'M4 12h16', 'M4 18h16'],
+}

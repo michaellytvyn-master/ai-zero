@@ -22,6 +22,15 @@ export function applyEvent(event: ChatEvent, setters: EventSetters): void {
         content: (previous[previous.length - 1]?.content ?? '') + event.content,
       }),
     )
+  } else if (event.kind === 'reasoning') {
+    setters.setTurns((previous) =>
+      replaceLast(previous, {
+        reasoning: (previous[previous.length - 1]?.reasoning ?? '') + event.content,
+      }),
+    )
+  } else if (event.kind === 'tool_call') {
+    // Handled by the agent loop, which reads the stream itself. A plain chat
+    // never offers tools, so nothing here should act on one.
   } else if (event.kind === 'exhausted') {
     setters.setExhausted(event.signupUrls)
     setters.setTurns((previous) => previous.slice(0, -2))

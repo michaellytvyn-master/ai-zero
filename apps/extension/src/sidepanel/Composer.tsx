@@ -1,5 +1,5 @@
 import { type ResponseMode, SEND, responseMode, responseModes } from '@zca/shared'
-import type { ModelOption } from '@/lib/models'
+import { activeWarning, groupedModels } from '@/lib/models'
 import type { PageMode } from '@/lib/page-context'
 import type { Session } from '@/lib/session'
 import Icon from './Icon'
@@ -12,7 +12,6 @@ export default function Composer(props: {
   busy: boolean
   pageMode: PageMode
   onPageMode: (mode: PageMode) => void
-  models: ModelOption[]
   model: string
   onModel: (id: string) => void
   showModelPicker: boolean
@@ -20,11 +19,17 @@ export default function Composer(props: {
   onResponseMode: (mode: ResponseMode) => void
   searchWeb: boolean
   onSearchWeb: (on: boolean) => void
+  act: boolean
+  onAct: (on: boolean) => void
+  canAct: boolean
   canSearch: boolean
   attached: string | null
   session: Session
   onError: (message: string | null) => void
 }) {
+  // Warns about the provider that will actually answer, at the moment of use.
+  const warning = activeWarning(props.session, props.model, props.pageMode !== 'off')
+
   return (
     <div className="composer">
       <div className="inputrow">
@@ -70,6 +75,23 @@ export default function Composer(props: {
           ))}
         </select>
 
+        <label
+          className="toggle"
+          title={
+            props.canAct
+              ? 'Let it click and type on this page. Anything irreversible asks first.'
+              : 'Needs permission to read this page first'
+          }
+        >
+          <input
+            type="checkbox"
+            checked={props.act}
+            disabled={!props.canAct}
+            onChange={(event) => props.onAct(event.target.checked)}
+          />
+          Act
+        </label>
+
         <label className="toggle" title="Answers from a model that searches as it works">
           <input
             type="checkbox"
@@ -98,16 +120,28 @@ export default function Composer(props: {
             style={{ maxWidth: 150 }}
           >
             <option value="auto">Auto</option>
-            {props.models.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
+            {groupedModels(props.session).map((group) => (
+              <optgroup key={group.providerId} label={group.providerLabel}>
+                {group.models.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         )}
 
         {props.attached !== null && <span className="attached spacer">sent: {props.attached}</span>}
       </div>
+
+      {props.act && (
+        <p className="caution">
+          It can click and type here. Anything that cannot be undone asks you first, and passwords
+          and card numbers are never filled in. Treat what the page says as untrusted.
+        </p>
+      )}
+      {warning !== null && <p className="caution">{warning}</p>}
     </div>
   )
 }

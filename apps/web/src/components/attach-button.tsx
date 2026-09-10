@@ -54,12 +54,13 @@ export default function AttachButton(props: {
       />
       <button
         type="button"
-        className="icon"
-        title="Attach a text file to read"
+        className="item"
+        title="Text files only — a browser can read those without a parser"
         disabled={props.disabled || busy}
         onClick={() => input.current?.click()}
       >
         {busy ? <span className="spin" /> : <Icon shape={PAPERCLIP} />}
+        {busy ? 'Reading…' : 'Attach a file'}
       </button>
     </>
   )

@@ -87,35 +87,37 @@ export default async function LimitsPage({
       </p>
 
       <h2>By provider</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Provider</th>
-            <th>Requests</th>
-            <th>Tokens in</th>
-            <th>Tokens out</th>
-            <th>Cost avoided</th>
-          </tr>
-        </thead>
-        <tbody>
-          {savings.byProvider.map((row) => (
-            <tr key={row.providerId}>
-              <td>{row.providerId}</td>
-              <td>{row.requests.toLocaleString()}</td>
-              <td>{row.inputTokens.toLocaleString()}</td>
-              <td>{row.outputTokens.toLocaleString()}</td>
-              <td>{formatUsd(row.microUsd)}</td>
-            </tr>
-          ))}
-          {savings.byProvider.length === 0 && (
+      <div className="tablewrap">
+        <table>
+          <thead>
             <tr>
-              <td colSpan={5} className="muted">
-                Nothing yet. <Link href="/chat">Start a chat</Link> and this fills in.
-              </td>
+              <th>Provider</th>
+              <th>Requests</th>
+              <th>Tokens in</th>
+              <th>Tokens out</th>
+              <th>Cost avoided</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {savings.byProvider.map((row) => (
+              <tr key={row.providerId}>
+                <td>{row.providerId}</td>
+                <td>{row.requests.toLocaleString()}</td>
+                <td>{row.inputTokens.toLocaleString()}</td>
+                <td>{row.outputTokens.toLocaleString()}</td>
+                <td>{formatUsd(row.microUsd)}</td>
+              </tr>
+            ))}
+            {savings.byProvider.length === 0 && (
+              <tr>
+                <td colSpan={5} className="muted">
+                  Nothing yet. <Link href="/chat">Start a chat</Link> and this fills in.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </>
   )
 }

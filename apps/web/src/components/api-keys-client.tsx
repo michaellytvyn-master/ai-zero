@@ -72,39 +72,41 @@ export default function ApiKeysClient({ initialKeys }: { initialKeys: KeyRow[] }
       {keys.length === 0 ? (
         <p className="muted">No keys yet.</p>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Key</th>
-              <th>Created</th>
-              <th>Last used</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {keys.map((key) => (
-              <tr key={key.id}>
-                <td>{key.name}</td>
-                <td>
-                  <code>{key.prefix}…</code>
-                </td>
-                <td className="muted">{key.createdAt.slice(0, 10)}</td>
-                <td className="muted">{key.lastUsedAt?.slice(0, 10) ?? 'never'}</td>
-                <td style={{ textAlign: 'right' }}>
-                  <button
-                    type="button"
-                    className="icon"
-                    title="Revoke"
-                    onClick={() => void revoke(key.id)}
-                  >
-                    <Icon shape={TRASH} size={14} />
-                  </button>
-                </td>
+        <div className="tablewrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Key</th>
+                <th>Created</th>
+                <th>Last used</th>
+                <th />
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {keys.map((key) => (
+                <tr key={key.id}>
+                  <td>{key.name}</td>
+                  <td>
+                    <code>{key.prefix}…</code>
+                  </td>
+                  <td className="muted">{key.createdAt.slice(0, 10)}</td>
+                  <td className="muted">{key.lastUsedAt?.slice(0, 10) ?? 'never'}</td>
+                  <td style={{ textAlign: 'right' }}>
+                    <button
+                      type="button"
+                      className="icon"
+                      title="Revoke"
+                      onClick={() => void revoke(key.id)}
+                    >
+                      <Icon shape={TRASH} size={14} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </>
   )

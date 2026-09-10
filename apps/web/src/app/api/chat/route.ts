@@ -93,7 +93,15 @@ export async function POST(request: Request): Promise<Response> {
     try {
       const first = await events.next()
       if (first.done === true || first.value.kind !== 'selected') {
-        return Response.json({ error: { type: 'no_provider_available' } }, { status: 503 })
+        return Response.json(
+          {
+            error: {
+              type: 'no_provider_available',
+              message: 'No provider answered. Check your keys in Settings, under Provider keys.',
+            },
+          },
+          { status: 503 },
+        )
       }
       selected = first.value
     } catch (error) {
@@ -145,6 +153,11 @@ function streamAndPersist(
           if (event.kind === 'delta') {
             answer += event.content
             send('delta', { content: event.content })
+          } else if (event.kind === 'reasoning') {
+            // Streamed so the user can watch it, but never stored: it is the
+            // model's scratch work, and feeding it back as history would spend
+            // context on it on every later turn.
+            send('reasoning', { content: event.content })
           } else if (event.kind === 'usage') {
             send('usage', { inputTokens: event.inputTokens, outputTokens: event.outputTokens })
           }

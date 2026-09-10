@@ -32,7 +32,12 @@ export default function EffortSlider(props: {
             <span key={mode.id} className={at <= position ? 'dot on' : 'dot'} />
           ))}
         </div>
-        <div className="knob" style={{ left: `${(position / last) * 100}%` }} />
+        <div
+          className="knob"
+          // A fraction, not a percentage: the stylesheet maps it onto the
+          // distance between the first and last dot.
+          style={{ '--at': last === 0 ? 0 : position / last } as React.CSSProperties}
+        />
         <input
           type="range"
           min={0}

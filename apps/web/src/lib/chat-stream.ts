@@ -17,6 +17,8 @@ export interface StreamHandlers {
   /** The conversation this landed in, who answered, and what was read first. */
   onMeta(meta: { conversationId: string; provider: string; model: string; pages: ReadPage[] }): void
   onDelta(chunk: string): void
+  /** The model's working-out, shown apart from the answer and never stored. */
+  onReasoning(chunk: string): void
   onExhausted(options: SignupOption[]): void
   onFailed(message: string): void
 }
@@ -75,6 +77,8 @@ export async function streamChatTurn(
       })
     } else if (event.name === 'delta') {
       handlers.onDelta(String(event.data.content))
+    } else if (event.name === 'reasoning') {
+      handlers.onReasoning(String(event.data.content))
     }
   }
 }

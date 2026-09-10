@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { modelCatalogue } from '@/lib/model-catalogue'
 import { safeAuth } from '@/auth'
@@ -5,6 +6,13 @@ import ChatClient from '@/components/chat-client'
 import { listConversations, loadConversation } from '@/lib/conversations'
 import { listProviderKeys } from '@/lib/provider-keys'
 import { demoRemaining } from '@/lib/usage'
+
+export const metadata: Metadata = {
+  title: 'Chat',
+  // Behind a sign-in; robots.txt disallows it too, but a disallowed URL can
+  // still be indexed from an external link — only the tag actually prevents it.
+  robots: { index: false, follow: false },
+}
 
 export const dynamic = 'force-dynamic'
 

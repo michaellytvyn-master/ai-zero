@@ -1,4 +1,5 @@
 import type { RefObject } from 'react'
+import Reasoning from './Reasoning'
 import type { Turn } from './turn'
 
 export default function MessageList(props: {
@@ -21,8 +22,11 @@ export default function MessageList(props: {
             {turn.role}
             {turn.answeredBy != null && ` · ${turn.answeredBy}`}
           </div>
+          {turn.reasoning !== undefined && turn.reasoning.length > 0 && (
+            <Reasoning text={turn.reasoning} answered={turn.content.length > 0} />
+          )}
           {turn.content ||
-            (props.busy && turn.content === '' ? (
+            (props.busy && turn.content === '' && (turn.reasoning ?? '') === '' ? (
               <span className="typing" role="status" aria-label="Thinking">
                 <i />
                 <i />

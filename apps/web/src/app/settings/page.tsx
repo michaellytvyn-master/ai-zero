@@ -82,20 +82,22 @@ export default async function DashboardPage() {
           Nothing yet. <Link href="/chat">Start a conversation</Link>.
         </p>
       ) : (
-        <table>
-          <tbody>
-            {conversations.items.slice(0, 8).map((conversation) => (
-              <tr key={conversation.id}>
-                <td>
-                  <Link href={`/chat?c=${conversation.id}`}>{conversation.title}</Link>
-                </td>
-                <td className="muted" style={{ width: 140, textAlign: 'right' }}>
-                  {conversation.updatedAt.toISOString().slice(0, 10)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="tablewrap">
+          <table>
+            <tbody>
+              {conversations.items.slice(0, 8).map((conversation) => (
+                <tr key={conversation.id}>
+                  <td>
+                    <Link href={`/chat?c=${conversation.id}`}>{conversation.title}</Link>
+                  </td>
+                  <td className="muted" style={{ width: 140, textAlign: 'right' }}>
+                    {conversation.updatedAt.toISOString().slice(0, 10)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </>
   )

@@ -1,9 +1,59 @@
 import { classifyThrown } from './errors'
 import { openAICompatibleChat } from './openai-compatible'
 import { type Transcriber, openAICompatibleTranscribe } from './transcription'
-import type { Provider } from './types'
+import type { ModelSpec, Provider } from './types'
 
 export const GROQ_BASE_URL = 'https://api.groq.com/openai/v1'
+
+/**
+ * Every model Groq lists under its free-plan rate limits. Anything absent from
+ * that table is absent here, however good it looks in the catalogue.
+ *
+ * Reasoning modes follow https://console.groq.com/docs/reasoning, verified
+ * 2026-09-09: GPT-OSS takes `include_reasoning`, everything else takes
+ * `reasoning_format`, and the two may not be sent together. Qwen 3.6 accepts
+ * only "none" and "default" for reasoning_effort, so it is not flagged for it.
+ */
+const GROQ_MODELS: readonly ModelSpec[] = [
+  {
+    id: 'openai/gpt-oss-120b',
+    label: 'GPT-OSS 120B',
+    contextWindow: 131072,
+    free: true,
+    reasoning: 'include',
+    reasoningEffort: true,
+  },
+  {
+    id: 'openai/gpt-oss-20b',
+    label: 'GPT-OSS 20B',
+    contextWindow: 131072,
+    free: true,
+    reasoning: 'include',
+    reasoningEffort: true,
+  },
+  {
+    id: 'qwen/qwen3.8-27b',
+    label: 'Qwen 3.8 27B',
+    contextWindow: 131042,
+    free: true,
+    reasoning: 'parsed',
+    reasoningEffort: true,
+  },
+  {
+    id: 'qwen/qwen3.6-27b',
+    label: 'Qwen 3.6 27B',
+    contextWindow: 131072,
+    free: true,
+    reasoning: 'parsed',
+  },
+  {
+    id: 'groq/compound',
+    label: 'Compound (web search built in)',
+    contextWindow: 131072,
+    free: true,
+  },
+  { id: 'groq/compound-mini', label: 'Compound Mini', contextWindow: 131072, free: true },
+]
 
 export function createGroq(baseUrl: string = GROQ_BASE_URL): Provider {
   return {
@@ -17,22 +67,13 @@ export function createGroq(baseUrl: string = GROQ_BASE_URL): Provider {
     // Services Agreement 3.1 permits serving End Users through your own
     // application; 3.2 and 6.3(c) forbid reselling or transferring the key.
     termsAllowServingEndUsers: true,
-    // Every model Groq lists under its free-plan rate limits. Anything absent
-    // from that table is absent here, however good it looks in the catalogue.
-    models: [
-      { id: 'openai/gpt-oss-120b', label: 'GPT-OSS 120B', contextWindow: 131072, free: true },
-      { id: 'openai/gpt-oss-20b', label: 'GPT-OSS 20B', contextWindow: 131072, free: true },
-      { id: 'qwen/qwen3.8-27b', label: 'Qwen 3.8 27B', contextWindow: 131042, free: true },
-      { id: 'qwen/qwen3.6-27b', label: 'Qwen 3.6 27B', contextWindow: 131072, free: true },
-      {
-        id: 'groq/compound',
-        label: 'Compound (web search built in)',
-        contextWindow: 131072,
-        free: true,
-      },
-      { id: 'groq/compound-mini', label: 'Compound Mini', contextWindow: 131072, free: true },
-    ],
-    chat: openAICompatibleChat({ providerId: 'groq', baseUrl, usesStreamOptions: true }),
+    models: GROQ_MODELS,
+    chat: openAICompatibleChat({
+      providerId: 'groq',
+      baseUrl,
+      usesStreamOptions: true,
+      models: GROQ_MODELS,
+    }),
     classifyError: classifyThrown,
   }
 }

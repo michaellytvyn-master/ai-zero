@@ -4,7 +4,7 @@ Hard constraint 4 says the base URLs, model ids and limits in SPEC.md are a
 starting point and must not be trusted. This file records what was actually
 checked, when, and against what. Re-check before touching an adapter.
 
-**Last verified: 2026-09-08.**
+**Last verified: 2026-09-09.**
 
 Context windows are no longer only what is written here. Providers publishing an
 OpenAI-style `/models` endpoint are asked at runtime and their answer wins; the
@@ -25,10 +25,15 @@ that it costs nothing, and a card is the point at which that stops being true.
 `registry.test.ts` asserts every shipped model is on a free tier, so a
 card-only provider cannot be added by accident.
 
-| Provider | Card | Free allowance | Models offered |
-|---|---|---|---|
-| Groq | no | 1 000 requests/day | 6 |
-| Cloudflare Workers AI | no | 10 000 neurons/day | 6 |
+| Provider | Card | Free allowance | Models offered | Reads your text |
+|---|---|---|---|---|
+| Groq | no | 1 000 requests/day | 6 | no |
+| Cloudflare Workers AI | no | 10 000 neurons/day | 6 | no |
+| Google Gemini | no | see AI Studio | 6 | **yes — see below** |
+
+The last column is not a detail. Google's free tier is the only one whose terms
+reserve the right to train on what is sent and to have people read it, so it is
+the only provider carrying a `privacyWarning`, shown on the key form itself.
 
 ## Groq — priority 10
 
@@ -130,3 +135,61 @@ Source: <https://openrouter.ai/docs/api-reference/limits>
 
 100+ models, OpenAI-compatible, 40 RPM, no card, but roughly 1 000 signup
 credits. Finite credit is a trial, same category as Cerebras.
+
+## Google Gemini — priority 30
+
+Added 2026-09-09 at the user's request. Last, by priority, because of the terms
+below: failover reaches it only after Groq and Cloudflare.
+
+- OpenAI-compatible base URL
+  `https://generativelanguage.googleapis.com/v1beta/openai` (the docs write it
+  with a trailing slash; the adapter appends `/chat/completions`, so it is
+  stored without one). Honours `stream_options.include_usage`, takes
+  `max_tokens`, and publishes a `/models` endpoint the runtime catalogue reads.
+  Source: <https://ai.google.dev/gemini-api/docs/openai>
+- Free tier, no card: a key from AI Studio works without a billing account.
+  The rate-limit page no longer prints per-model numbers and points at the
+  AI Studio dashboard instead, so no figures are recorded here rather than
+  guessed. Source: <https://ai.google.dev/gemini-api/docs/rate-limits>
+- Model ids shipped — the stable 3.x line, all marked "Free of charge" on the
+  pricing page: `gemini-3.8-flash`, `gemini-3.7-flash`, `gemini-3.6-flash`,
+  `gemini-3.5-flash`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`.
+  Context windows are a floor and are corrected at runtime from `/models`.
+  Sources: <https://ai.google.dev/gemini-api/docs/pricing>,
+  <https://ai.google.dev/gemini-api/docs/models>
+- **The 2.5 models are not shipped, and the docs are wrong about them.** Both
+  the pricing page and the model page still list `gemini-2.5-pro`,
+  `gemini-2.5-flash` and `gemini-2.5-flash-lite` with a free tier. A real
+  request on 2026-09-09 answered:
+
+  > This model models/gemini-2.5-pro is no longer available to new users.
+  > Please update your code to use models/gemini-3.1-pro-preview
+
+  with the same for the two Flash variants, pointing at `gemini-3.6-flash` and
+  `gemini-3.5-flash-lite`. This is hard constraint 4 earning its keep: the
+  documentation was the stale source and the API was right. `gemini.test.ts`
+  asserts the three stay absent, so they cannot be re-added from the docs.
+- No Pro model ships. The only Pro on a free tier was 2.5, and the successor
+  Google names is a preview whose free-tier status is undocumented; shipping it
+  on that basis would repeat the mistake above in the other direction.
+- Confirmed answering on a real key, 2026-09-09: `gemini-3.8-flash` and
+  `gemini-3.5-flash-lite`. The other four are siblings on the same stable line.
+- Reasoning: every model thinks, and Google keeps the thought to itself. It
+  exposes `reasoning_effort` (`minimal | low | medium | high | none`) and none
+  of Groq's parameters, so the mode is `'effort'`: grant the token headroom,
+  pass the dial, send nothing else. Sending `reasoning_format` here would be a
+  400, not a no-op.
+- Terms — permitted: the Additional Terms let you make "API Clients" (a
+  website, application or other service built on the API) available to users.
+- Terms — **the catch**: on the unpaid tier "Google uses the content you submit
+  to the Services and any generated responses to provide, improve, and develop
+  Google products and services", "Human reviewers may read, annotate, and
+  process your API input and output", and "Do not submit sensitive,
+  confidential, or personal information to the Unpaid Services".
+  Source: <https://ai.google.dev/gemini-api/terms>
+
+  This is why `Provider.privacyWarning` exists. It is rendered above the key
+  field on `/settings/keys`, quoted rather than paraphrased. A user choosing
+  Gemini should be choosing it knowingly; the rest of this product's promise —
+  that we never keep the text — says nothing about what the provider does with
+  it once it arrives.

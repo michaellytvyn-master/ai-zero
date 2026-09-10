@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { formatUsd, referenceModel, savingsFrom } from '@zca/pricing'
 import { redirect } from 'next/navigation'
 import { signOutAdmin } from './actions'
@@ -5,8 +6,14 @@ import { isAdminSignedIn } from '@/lib/admin-auth'
 import { dailyRows, providerRows, userRows } from '@/lib/admin'
 import { usageTotalsForEveryone } from '@/lib/savings'
 
+export const metadata: Metadata = {
+  title: 'Operator',
+  // Behind a sign-in; robots.txt disallows it too, but a disallowed URL can
+  // still be indexed from an external link — only the tag actually prevents it.
+  robots: { index: false, follow: false },
+}
+
 export const dynamic = 'force-dynamic'
-export const metadata = { title: 'Operator', robots: { index: false, follow: false } }
 
 export default async function AdminPage() {
   if (!(await isAdminSignedIn())) redirect('/admin/login')
@@ -55,87 +62,93 @@ export default async function AdminPage() {
       </div>
 
       <h2>Providers</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Provider</th>
-            <th>Key</th>
-            <th>Requests</th>
-            <th>Tokens</th>
-            <th>Avg latency</th>
-            <th>Failures</th>
-          </tr>
-        </thead>
-        <tbody>
-          {providers.map((row) => (
-            <tr key={`${row.providerId}-${row.keyOwner}`}>
-              <td>{row.providerId}</td>
-              <td className="muted">{row.keyOwner === 'user' ? "user's own" : 'trial pool'}</td>
-              <td>{row.requests.toLocaleString()}</td>
-              <td>{row.totalTokens.toLocaleString()}</td>
-              <td>{row.avgLatencyMs} ms</td>
-              <td className={row.failures > 0 ? 'danger' : undefined}>{row.failures}</td>
-            </tr>
-          ))}
-          {providers.length === 0 && (
+      <div className="tablewrap">
+        <table>
+          <thead>
             <tr>
-              <td colSpan={6} className="muted">
-                No requests recorded yet.
-              </td>
+              <th>Provider</th>
+              <th>Key</th>
+              <th>Requests</th>
+              <th>Tokens</th>
+              <th>Avg latency</th>
+              <th>Failures</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {providers.map((row) => (
+              <tr key={`${row.providerId}-${row.keyOwner}`}>
+                <td>{row.providerId}</td>
+                <td className="muted">{row.keyOwner === 'user' ? "user's own" : 'trial pool'}</td>
+                <td>{row.requests.toLocaleString()}</td>
+                <td>{row.totalTokens.toLocaleString()}</td>
+                <td>{row.avgLatencyMs} ms</td>
+                <td className={row.failures > 0 ? 'danger' : undefined}>{row.failures}</td>
+              </tr>
+            ))}
+            {providers.length === 0 && (
+              <tr>
+                <td colSpan={6} className="muted">
+                  No requests recorded yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
       <h2>Accounts</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Email</th>
-            <th>Joined</th>
-            <th>Requests</th>
-            <th>Tokens in</th>
-            <th>Tokens out</th>
-            <th>Last active</th>
-          </tr>
-        </thead>
-        <tbody>
-          {people.map((row) => (
-            <tr key={row.id}>
-              <td>{row.email}</td>
-              <td className="muted">{row.createdAt.toISOString().slice(0, 10)}</td>
-              <td>{row.requests.toLocaleString()}</td>
-              <td>{row.inputTokens.toLocaleString()}</td>
-              <td>{row.outputTokens.toLocaleString()}</td>
-              <td className="muted">
-                {row.lastActive === null
-                  ? '—'
-                  : new Date(row.lastActive).toISOString().slice(0, 10)}
-              </td>
+      <div className="tablewrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Joined</th>
+              <th>Requests</th>
+              <th>Tokens in</th>
+              <th>Tokens out</th>
+              <th>Last active</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {people.map((row) => (
+              <tr key={row.id}>
+                <td>{row.email}</td>
+                <td className="muted">{row.createdAt.toISOString().slice(0, 10)}</td>
+                <td>{row.requests.toLocaleString()}</td>
+                <td>{row.inputTokens.toLocaleString()}</td>
+                <td>{row.outputTokens.toLocaleString()}</td>
+                <td className="muted">
+                  {row.lastActive === null
+                    ? '—'
+                    : new Date(row.lastActive).toISOString().slice(0, 10)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <h2>Last 30 days</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Day</th>
-            <th>Requests</th>
-            <th>Tokens</th>
-          </tr>
-        </thead>
-        <tbody>
-          {days.map((row) => (
-            <tr key={row.day}>
-              <td>{row.day}</td>
-              <td>{row.requests.toLocaleString()}</td>
-              <td>{row.totalTokens.toLocaleString()}</td>
+      <div className="tablewrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Day</th>
+              <th>Requests</th>
+              <th>Tokens</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {days.map((row) => (
+              <tr key={row.day}>
+                <td>{row.day}</td>
+                <td>{row.requests.toLocaleString()}</td>
+                <td>{row.totalTokens.toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </main>
   )
 }
