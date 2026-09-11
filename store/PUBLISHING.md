@@ -35,11 +35,8 @@ Then, on the repository page:
   sends reporters there.
 - **About (the gear by the description)**: add topics — `ai`, `llm`, `chrome-extension`, `nextjs`,
   `openai-compatible`, `groq`, `gemini`, `byok`.
-- Add the CI badge to the top of the README, replacing `OWNER` with your GitHub name:
-
-  ```markdown
-  <a href="https://github.com/OWNER/zero-cost-ai/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/OWNER/zero-cost-ai/ci.yml?style=flat-square&labelColor=0b0d10"></a>
-  ```
+- The README's CI badge points at `michaellytvyn-master/ai-zero`. In a fork, change both names in
+  its URL to your own.
 
 ## 2. The website, deployed
 

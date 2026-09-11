@@ -7,6 +7,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/michaellytvyn-master/ai-zero/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/michaellytvyn-master/ai-zero/ci.yml?branch=main&style=flat-square&labelColor=0b0d10&label=CI"></a>
   <a href="LICENSE"><img alt="MIT licence" src="https://img.shields.io/badge/licence-MIT-21e58a?style=flat-square&labelColor=0b0d10"></a>
   <img alt="TypeScript strict" src="https://img.shields.io/badge/TypeScript-strict-21e58a?style=flat-square&labelColor=0b0d10">
   <img alt="Next.js 16" src="https://img.shields.io/badge/Next.js-16-21e58a?style=flat-square&labelColor=0b0d10">
