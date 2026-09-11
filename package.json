@@ -2,7 +2,7 @@
   "name": "zero-cost-ai",
   "private": true,
   "description": "One chat, one OpenAI-compatible API and a browser agent — over the free AI accounts you already own.",
-  "license": "MIT",
+  "license": "PolyForm-Noncommercial-1.0.0",
   "author": "Michael Lytvyn",
   "keywords": [
     "ai",

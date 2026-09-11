@@ -61,7 +61,7 @@ ask about this; the answer is that every capability serves a request the user ty
 > New accounts get a small daily allowance on the operator's keys, so you can see whether it is
 > worth registering with a provider at all.
 >
-> Open source, MIT licensed.
+> Source available under the PolyForm Noncommercial License 1.0.0.
 
 ## Category
 

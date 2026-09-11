@@ -1,7 +1,8 @@
 /**
  * Lucide icon geometry, kept as data so each app can render it with its own
  * component. Copying two icons is cheaper than a whole icon library for them.
- * Source: https://lucide.dev/icons — MIT licensed.
+ * Source: https://lucide.dev/icons — ISC licensed, some icons MIT via Feather.
+ * Their notices are kept in THIRD-PARTY-NOTICES.md and must stay with the code.
  */
 export interface IconShape {
   readonly viewBox: string

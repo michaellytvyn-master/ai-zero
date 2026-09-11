@@ -2,7 +2,7 @@
 
 Three things, in this order, because each depends on the one before:
 
-1. [The code on GitHub](#1-the-code-on-github) — open source.
+1. [The code on GitHub](#1-the-code-on-github) — source available, noncommercial.
 2. [The website, deployed](#2-the-website-deployed) — the extension signs in against it, so it has
    to exist first.
 3. [The extension, in the Chrome Web Store](#3-the-extension-in-the-chrome-web-store).

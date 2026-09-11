@@ -48,6 +48,13 @@ These are the load-bearing ones. Each has a test; a change that needs to break o
   says what.
 - Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
 
+## Licensing of contributions
+
+The project is under the [PolyForm Noncommercial License 1.0.0](LICENSE), and the author also offers
+commercial licences. By opening a pull request you agree that your contribution is licensed under the
+same terms, and that the author may also license it to others under different terms, including
+commercial ones. If that does not suit you, say so in the pull request before it is merged.
+
 ## Security
 
 Please report vulnerabilities privately — see [SECURITY.md](SECURITY.md).

@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://github.com/michaellytvyn-master/ai-zero/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/michaellytvyn-master/ai-zero/ci.yml?branch=main&style=flat-square&labelColor=0b0d10&label=CI"></a>
-  <a href="LICENSE"><img alt="MIT licence" src="https://img.shields.io/badge/licence-MIT-21e58a?style=flat-square&labelColor=0b0d10"></a>
+  <a href="LICENSE"><img alt="PolyForm Noncommercial licence" src="https://img.shields.io/badge/licence-PolyForm_Noncommercial-21e58a?style=flat-square&labelColor=0b0d10"></a>
   <img alt="TypeScript strict" src="https://img.shields.io/badge/TypeScript-strict-21e58a?style=flat-square&labelColor=0b0d10">
   <img alt="Next.js 16" src="https://img.shields.io/badge/Next.js-16-21e58a?style=flat-square&labelColor=0b0d10">
   <img alt="Chrome Manifest V3" src="https://img.shields.io/badge/Chrome-Manifest_V3-21e58a?style=flat-square&labelColor=0b0d10">
@@ -172,4 +172,11 @@ production builds on every push.
 
 ## Licence
 
-MIT — see [LICENSE](LICENSE).
+[PolyForm Noncommercial 1.0.0](LICENSE). You may use, change and share this project for any
+noncommercial purpose — personal use, study, hobby projects, research, and use by charities,
+schools and public bodies. **Commercial use needs a separate licence**; ask the author through
+[GitHub](https://github.com/michaellytvyn-master).
+
+This is source available, not open source in the OSI sense. Versions up to commit `b0cf458` were
+published under the MIT licence, and remain so. Third-party code keeps its own terms — see
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

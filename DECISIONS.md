@@ -793,3 +793,18 @@ text as context.
 The consequence is honest and stated: only formats a browser can turn into text
 are accepted. PDF and DOCX would need a parser, so they are refused by name
 rather than half-read into mojibake.
+
+## 44. The licence is PolyForm Noncommercial
+
+The brief asked for MIT. From 2026-09-11 the project is licensed under PolyForm Noncommercial 1.0.0:
+anyone may use, change and share it for noncommercial purposes; commercial use needs a separate
+licence from the author. The goal was "use, but no commercial copies", and MIT permits exactly the
+commercial copy it was meant to prevent.
+
+Two limits of any licence, stated so nobody is surprised. Code cannot be licensed for use but not for
+copying — using it is copying it. And GitHub's terms let anyone view and fork a public repository
+whatever its licence. Commits up to b0cf458 were published under MIT, and that grant cannot be taken
+back for those versions.
+
+Third-party code keeps its own terms: the Lucide icon geometry is ISC, with some icons MIT through
+Feather. Both notices are in THIRD-PARTY-NOTICES.md.
