@@ -1,6 +1,6 @@
 import { orderedProviders } from '@zca/providers'
 import { extensionTokenUser } from '@/lib/extension-auth'
-import { decryptedKeys } from '@/lib/provider-keys'
+import { decryptedKeys, ownsModelKey } from '@/lib/provider-keys'
 import { unauthenticatedResponse } from '@/lib/responses'
 import { demoRemaining } from '@/lib/usage'
 
@@ -23,7 +23,7 @@ export async function GET(request: Request): Promise<Response> {
   // Counted across model providers only. The same vault also holds a Cloudinary
   // credential for image storage, and connecting somewhere to keep pictures
   // must not make the panel claim the user is running on their own keys.
-  const usingOwnKeys = orderedProviders().some((provider) => keys.has(provider.id))
+  const usingOwnKeys = ownsModelKey(keys.keys())
   const allowance = usingOwnKeys ? null : await demoRemaining(user.id)
 
   return Response.json(

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { createConversation, listConversations } from '@/lib/conversations'
+import { withContentStore } from '@/lib/content-store'
 import { resolveUser } from '@/lib/request-user'
 import { unauthenticatedResponse } from '@/lib/responses'
 
@@ -18,17 +18,19 @@ export async function GET(request: Request): Promise<Response> {
     return Response.json({ error: { type: 'invalid_request' } }, { status: 400 })
   }
 
-  const page = await listConversations(user.id, before)
-  return Response.json(
-    {
-      conversations: page.items.map((item) => ({
-        ...item,
-        updatedAt: item.updatedAt.toISOString(),
-      })),
-      nextCursor: page.nextCursor,
-    },
-    { headers: { 'cache-control': 'no-store' } },
-  )
+  return withContentStore(user.id, async (store) => {
+    const page = await store.list(before)
+    return Response.json(
+      {
+        conversations: page.items.map((item) => ({
+          ...item,
+          updatedAt: item.updatedAt.toISOString(),
+        })),
+        nextCursor: page.nextCursor,
+      },
+      { headers: { 'cache-control': 'no-store' } },
+    )
+  })
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -40,5 +42,7 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: { type: 'invalid_request' } }, { status: 400 })
   }
 
-  return Response.json({ id: await createConversation(user.id, parsed.data.firstMessage) })
+  return withContentStore(user.id, async (store) =>
+    Response.json({ id: await store.create(parsed.data.firstMessage) }),
+  )
 }

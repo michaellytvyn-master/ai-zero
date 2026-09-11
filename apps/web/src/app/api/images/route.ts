@@ -9,12 +9,12 @@ import { z } from 'zod'
 import { runtimeConfig } from '@/config'
 import { CloudinaryNotConfigured, uploadImage } from '@/lib/cloudinary'
 import { imageDestination } from '@/lib/image-store'
-import { appendMessage } from '@/lib/conversations'
+import { contentStoreFor } from '@/lib/content-store'
 import { IMAGE_LIFETIME_MS, recordImage } from '@/lib/images'
 import { decryptedKeys } from '@/lib/provider-keys'
 import { resolveUser } from '@/lib/request-user'
 import { demoExhaustedResponse, unauthenticatedResponse } from '@/lib/responses'
-import { claimDemoMessage } from '@/lib/usage'
+import { TRIAL_IMAGES_PER_DAY, claimDemoMessage, claimTrialImage } from '@/lib/usage'
 import { claimRequestSlot, tooManyRequests } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
@@ -59,6 +59,25 @@ export async function POST(request: Request): Promise<Response> {
     )
   }
 
+  // The operator's Cloudinary is a place to try the feature: five pictures a
+  // day, each gone after half an hour. The user's own account has no cap.
+  if (destination.storage === 'operator') {
+    const slot = await claimTrialImage(user.id)
+    if (!slot.allowed) {
+      return Response.json(
+        {
+          error: {
+            type: 'image_trial_exhausted',
+            message:
+              `That is all ${TRIAL_IMAGES_PER_DAY} trial pictures for today. Connect your own ` +
+              'Cloudinary account in Settings to make as many as you like and keep them.',
+          },
+        },
+        { status: 429 },
+      )
+    }
+  }
+
   const own = (await decryptedKeys(user.id)).get('cloudflare')
   const credential =
     own ??
@@ -99,34 +118,43 @@ export async function POST(request: Request): Promise<Response> {
     // id so one person's pictures can be found and swept without the others.
     const folder = destination.storage === 'user' ? 'zero-cost-ai' : `zca/${user.id}`
     const stored = await uploadImage(image.bytes, folder, request.signal, destination.account)
-    const row = await recordImage({
-      userId: user.id,
-      conversationId: parsed.data.conversationId ?? null,
-      publicId: stored.publicId,
-      url: stored.url,
-      model,
-      bytes: stored.bytes,
-      storage: destination.storage,
-    })
+
+    // Only a picture in the shared pool is recorded here, because only that one
+    // has to be found again and deleted. One in the user's own account is
+    // theirs, and the operator's database keeps no trace of it.
+    const expiresAt =
+      destination.storage === 'operator'
+        ? (
+            await recordImage({
+              userId: user.id,
+              conversationId: parsed.data.conversationId ?? null,
+              publicId: stored.publicId,
+              url: stored.url,
+              model,
+              bytes: stored.bytes,
+              storage: 'operator',
+            })
+          ).expiresAt
+        : null
 
     if (parsed.data.conversationId !== undefined) {
-      await appendMessage(parsed.data.conversationId, {
+      const store = await contentStoreFor(user.id)
+      await store.append(parsed.data.conversationId, {
         role: 'assistant',
-        content: `![generated image](${row.url})`,
+        content: `![generated image](${stored.url})`,
         providerId: 'cloudflare',
         model,
       })
     }
 
     return Response.json({
-      id: row.id,
-      url: row.url,
+      url: stored.url,
       model,
       // Null says "this one is yours and is kept", which the caption renders
       // instead of a countdown.
-      expiresAt: row.expiresAt?.toISOString() ?? null,
+      expiresAt: expiresAt?.toISOString() ?? null,
       lifetimeMinutes: Math.round(IMAGE_LIFETIME_MS / 60_000),
-      storage: row.expiresAt === null ? 'user' : 'operator',
+      storage: destination.storage,
     })
   } catch (error) {
     if (error instanceof ImagePromptError) {

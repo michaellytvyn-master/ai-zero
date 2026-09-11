@@ -808,3 +808,20 @@ back for those versions.
 
 Third-party code keeps its own terms: the Lucide icon geometry is ISC, with some icons MIT through
 Feather. Both notices are in THIRD-PARTY-NOTICES.md.
+
+## 45. Users bring their own database
+
+The brief kept everything in one Postgres. As of 2026-09-11 a user's conversations live in a Postgres
+of their own, and the operator's database keeps accounts, the encrypted key vault, trial allowances,
+usage metadata, and at most 20 messages of history for someone who has not connected one.
+
+The reason is ownership and exposure, and it is worth being exact about which: a breach of the
+operator's database no longer yields anyone's conversations, and a user can empty their history
+without asking. It does **not** hide messages from the operator — the server still passes each one to
+the model — and it adds risks the single database did not have. The server now connects to addresses
+users type, so it resolves once, refuses private addresses, connects to the resolved IP and requires
+TLS (see docs/features.md); and the vault now holds credentials to many databases, which is why the
+settings page tells users to create one for this purpose rather than point it at anything else.
+
+Usage metadata stays with the operator on purpose, so the admin view keeps working; it never held
+text. The trial history rolls rather than refuses, so a trial never stops working — it forgets.

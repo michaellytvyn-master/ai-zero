@@ -51,8 +51,9 @@ ask about this; the answer is that every capability serves a request the user ty
 >   address the page links to or that you typed; any other address is shown to you in full first.
 > • It stops after twelve steps.
 >
-> Conversations are stored on your account, so the same chat is on the website and in every browser
-> you sign in from. Nothing from Act mode is stored.
+> Connect a Postgres database of your own and your conversations are kept there — in your database,
+> not ours — and the same chat is on the website and in every browser you sign in from. Without one,
+> your last 20 messages are kept so you can try it. Nothing from Act mode is stored.
 >
 > Please know what your provider does with what you send. Groq and Cloudflare do not keep it for
 > training. Google Gemini's free tier does, and Google's terms say reviewers may read it — the
@@ -118,7 +119,8 @@ removed for disclosing too little, never for disclosing too much.
   is sent to the model provider the user chose. In Act mode, each step sends that provider a list of
   the page's controls with their labels and current values, and the page's address without its query
   string. Password fields, fields named like a secret and anything shaped like a card number are
-  withheld. Chats are saved to the user's account; nothing from Act mode is.
+  withheld. Chats are saved to the user's own database if they connect one, or — as a trial — the
+  last 20 messages in ours; nothing from Act mode is.
 - **Personal communications** — tick it. The extension does not seek out mail or messages, but if the
   user opens their webmail and asks about it, or acts on it, that content goes to the model provider.
 - **Audio** — collected only while the user is recording. Sent to the transcription provider and

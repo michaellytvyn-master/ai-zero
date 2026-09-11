@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { appendMessage, loadConversation } from '@/lib/conversations'
+import { withContentStore } from '@/lib/content-store'
 import { resolveUser } from '@/lib/request-user'
 import { unauthenticatedResponse } from '@/lib/responses'
 
@@ -33,15 +33,17 @@ export async function POST(
   }
 
   const { id } = await params
-  if ((await loadConversation(user.id, id)) === null) {
-    return Response.json({ error: { type: 'not_found' } }, { status: 404 })
-  }
-
-  await appendMessage(id, {
-    role: parsed.data.role,
-    content: parsed.data.content,
-    providerId: parsed.data.providerId ?? null,
-    model: parsed.data.model ?? null,
+  return withContentStore(user.id, async (store) => {
+    // The store refuses a conversation that is not this user's, in the same
+    // statement that writes — so there is no gap between checking and writing.
+    const written = await store.append(id, {
+      role: parsed.data.role,
+      content: parsed.data.content,
+      providerId: parsed.data.providerId ?? null,
+      model: parsed.data.model ?? null,
+    })
+    return written
+      ? new Response(null, { status: 204 })
+      : Response.json({ error: { type: 'not_found' } }, { status: 404 })
   })
-  return new Response(null, { status: 204 })
 }

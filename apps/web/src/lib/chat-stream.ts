@@ -19,6 +19,12 @@ export interface StreamHandlers {
   onDelta(chunk: string): void
   /** The model's working-out, shown apart from the answer and never stored. */
   onReasoning(chunk: string): void
+  /**
+   * Something went wrong after the reply had started — the provider stopped,
+   * or the reply could not be saved. Shown beside the answer, never in place of
+   * it: what arrived is still worth reading.
+   */
+  onNotice(message: string): void
   onExhausted(options: SignupOption[]): void
   onFailed(message: string): void
 }
@@ -79,6 +85,8 @@ export async function streamChatTurn(
       handlers.onDelta(String(event.data.content))
     } else if (event.name === 'reasoning') {
       handlers.onReasoning(String(event.data.content))
+    } else if (event.name === 'error') {
+      handlers.onNotice(String(event.data.message ?? 'Something went wrong part way through.'))
     }
   }
 }

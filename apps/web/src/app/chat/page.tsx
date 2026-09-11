@@ -3,8 +3,10 @@ import { redirect } from 'next/navigation'
 import { modelCatalogue } from '@/lib/model-catalogue'
 import { safeAuth } from '@/auth'
 import ChatClient from '@/components/chat-client'
-import { listConversations, loadConversation } from '@/lib/conversations'
-import { listProviderKeys } from '@/lib/provider-keys'
+import { TRIAL_HISTORY_MESSAGES, contentStoreFor } from '@/lib/content-store'
+import type { ConversationPage, ConversationSummary, StoredMessage } from '@/lib/conversations'
+import { UserDatabaseError } from '@/lib/user-database'
+import { listProviderKeys, ownsModelKey } from '@/lib/provider-keys'
 import { demoRemaining } from '@/lib/usage'
 
 export const metadata: Metadata = {
@@ -26,18 +28,33 @@ export default async function ChatPage({
   if (typeof userId !== 'string') redirect('/signin')
 
   const { c } = await searchParams
-  const [conversations, keys] = await Promise.all([
-    listConversations(userId),
-    listProviderKeys(userId),
-  ])
-  const active = c === undefined ? null : await loadConversation(userId, c)
+  const keys = await listProviderKeys(userId)
+
+  // The history lives in the user's own database when they have connected one.
+  // If it does not answer, the page still opens and says so; nothing falls
+  // back to storing their chats here instead.
+  let conversations: ConversationPage = { items: [], nextCursor: null }
+  let active: { summary: ConversationSummary; messages: StoredMessage[] } | null = null
+  let historyNotice: string | null = null
+  try {
+    const store = await contentStoreFor(userId)
+    conversations = await store.list()
+    active = c === undefined ? null : await store.load(c)
+    if (store.kind === 'trial') {
+      historyNotice = `Only your last ${TRIAL_HISTORY_MESSAGES} messages are kept. Connect your own database in Settings to keep everything.`
+    }
+  } catch (error) {
+    if (!(error instanceof UserDatabaseError)) throw error
+    historyNotice = error.userMessage
+  }
 
   // Reopening a conversation preselects whatever answered last, so "continue
   // with a different model" is a single change rather than a re-pick.
   const lastAnswer = [...(active?.messages ?? [])]
     .reverse()
     .find((message) => message.providerId !== null && message.model !== null)
-  const allowance = keys.length > 0 ? null : await demoRemaining(userId)
+  const ownKeys = ownsModelKey(keys.map((key) => key.providerId))
+  const allowance = ownKeys ? null : await demoRemaining(userId)
 
   return (
     <ChatClient
@@ -62,7 +79,8 @@ export default async function ChatPage({
         provider: message.providerId,
         model: message.model,
       }))}
-      usingOwnKeys={keys.length > 0}
+      usingOwnKeys={ownKeys}
+      historyNotice={historyNotice}
       demoRemaining={allowance?.remaining ?? null}
       demoLimit={allowance?.limit ?? null}
     />

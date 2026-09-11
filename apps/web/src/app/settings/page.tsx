@@ -3,8 +3,10 @@ import { redirect } from 'next/navigation'
 import { orderedProviders } from '@zca/providers'
 import { formatUsd, referenceModel, savingsFrom } from '@zca/pricing'
 import { safeAuth } from '@/auth'
-import { listConversations } from '@/lib/conversations'
-import { listProviderKeys } from '@/lib/provider-keys'
+import { contentStoreFor } from '@/lib/content-store'
+import type { ConversationPage } from '@/lib/conversations'
+import { UserDatabaseError } from '@/lib/user-database'
+import { listProviderKeys, ownsModelKey } from '@/lib/provider-keys'
 import { usageTotalsForUser } from '@/lib/savings'
 import { demoRemaining } from '@/lib/usage'
 
@@ -15,13 +17,19 @@ export default async function DashboardPage() {
   const userId = session?.user?.id
   if (typeof userId !== 'string') redirect('/signin')
 
-  const [keys, totals, conversations] = await Promise.all([
-    listProviderKeys(userId),
-    usageTotalsForUser(userId),
-    listConversations(userId),
-  ])
+  const [keys, totals] = await Promise.all([listProviderKeys(userId), usageTotalsForUser(userId)])
+  let conversations: ConversationPage = { items: [], nextCursor: null }
+  let historyError: string | null = null
+  try {
+    conversations = await (await contentStoreFor(userId)).list()
+  } catch (error) {
+    if (!(error instanceof UserDatabaseError)) throw error
+    historyError = error.userMessage
+  }
   const savings = savingsFrom(totals, referenceModel())
-  const allowance = keys.length > 0 ? null : await demoRemaining(userId)
+  const allowance = ownsModelKey(keys.map((key) => key.providerId))
+    ? null
+    : await demoRemaining(userId)
   const connected = new Set(keys.map((key) => key.providerId))
 
   return (
@@ -77,7 +85,9 @@ export default async function DashboardPage() {
       </Link>
 
       <h2 style={{ marginTop: 30 }}>Recent chats</h2>
-      {conversations.items.length === 0 ? (
+      {historyError !== null ? (
+        <p className="error">{historyError}</p>
+      ) : conversations.items.length === 0 ? (
         <p className="muted">
           Nothing yet. <Link href="/chat">Start a conversation</Link>.
         </p>

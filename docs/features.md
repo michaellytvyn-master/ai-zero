@@ -3,6 +3,7 @@
 The [README](../README.md) is the short version. This is everything behind it — what each feature
 does, the numbers it runs on, and the choices that are not obvious from the outside.
 
+- [Where your data lives](#where-your-data-lives)
 - [The extension](#the-extension)
 - [Acting on a page](#acting-on-a-page)
 - [Response modes and reasoning](#response-modes-and-reasoning)
@@ -17,13 +18,49 @@ does, the numbers it runs on, and the choices that are not obvious from the outs
 - [Privacy properties held by the code](#privacy-properties-held-by-the-code)
 - [The site: mobile and search engines](#the-site-mobile-and-search-engines)
 
+## Where your data lives
+
+Two databases, with a line between them.
+
+| | Kept here | Never here |
+|---|---|---|
+| **The operator's** | Accounts, the encrypted key vault, trial allowances, per-request usage counts (no text), and — only for someone who has not connected their own — the newest 20 messages | Conversations of anyone with a database of their own |
+| **The user's own** | Every conversation and message, in two tables prefixed `zca_` | Anything else of the service's |
+
+A user connects their Postgres under **Settings → Provider keys** by pasting its address. The server
+then, in order: checks the address, connects, creates the two tables, copies any trial history
+across keeping its ids (so a retry duplicates nothing), saves the address encrypted in the vault, and
+deletes the trial copy from its own database. If the user's database later stops answering, requests
+fail with a message saying so — nothing falls back to writing their conversations into the
+operator's database instead.
+
+Connecting to an address a user typed is a request-forgery primitive, like fetching a link. So:
+
+- the host is resolved once and **every** address it resolves to must be public — a name with one
+  public and one private record is refused, not a coin toss;
+- the connection goes to that resolved address, so a name that changes its answer between the check
+  and the connection (DNS rebinding) is never looked up again, while TLS still validates the
+  certificate against the real name;
+- TLS is required — `sslmode=disable` is refused, `sslmode=require` encrypts without checking the
+  certificate, and anything else verifies it;
+- pools are small (two connections), statements time out after ten seconds, and connecting is rate
+  limited like any provider call.
+
+Each rule has a test, and each test was checked by breaking the rule and watching it fail. A local,
+unencrypted Postgres is allowed only with `USER_DATABASE_INSECURE_LOCAL=true`, and never when
+`NODE_ENV` is `production`.
+
+What the model provider sees is not changed by any of this: a message still goes from this server to
+the model that answers it. The user's database decides where history is *kept*, not who reads a
+message on its way to an answer.
+
 ## The extension
 
 Each tab gets its own panel, and only the tabs you opened it on have one. Click the toolbar icon on
 a tab and the panel opens there; a dot appears on the icon for that tab, and the panel names the tab
 it belongs to. Switch to a tab you never opened it on and the panel is simply not there; switch back
-and your chat is still running. The ✕ closes it for that tab alone. Chats are stored on your
-account, so they also show up on the site.
+and your chat is still running. The ✕ closes it for that tab alone. Chats go to the same place as
+the site's — your own database, or the trial — so they show up in both.
 
 Tabs with a panel open are collected into a named tab group, so you can see at a glance which they
 are. A toggle in the header turns that off.
@@ -122,7 +159,8 @@ images — and the result is stored on Cloudinary. Where depends on you:
   and pictures are written there and **never deleted by this service**. They are in your account,
   on your free tier. Disconnecting leaves them where they are.
 - **Otherwise** they go to the operator's shared pool, which is for trying the feature, not for
-  keeping anything: **deleted an hour after they are made**, counted down under each one.
+  keeping anything: **five a day, each deleted 30 minutes after it is made**, counted down under
+  each one.
 
 The sweep that empties the shared pool checks two things before deleting — that the row belongs to
 the operator's storage *and* that it has an expiry — and was proven against a real database not to

@@ -30,3 +30,12 @@ export function unauthenticatedResponse(): Response {
     { status: 401 },
   )
 }
+
+/**
+ * The user's own database did not answer. Not a server fault and not theirs to
+ * debug from a stack trace: the message says what to check, and nothing was
+ * written anywhere else in its place.
+ */
+export function userDatabaseUnavailableResponse(message: string): Response {
+  return Response.json({ error: { type: 'database_unavailable', message } }, { status: 503 })
+}

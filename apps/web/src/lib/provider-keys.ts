@@ -1,8 +1,23 @@
 import { and, eq } from 'drizzle-orm'
+import { providers } from '@zca/providers'
 import { vaultConfig } from '../config'
 import { db } from '../db'
 import { providerKeys } from '../db/schema'
 import { decryptSecret, encryptSecret, keyHint } from './crypto'
+
+const MODEL_PROVIDER_IDS = new Set(providers.map((provider) => provider.id))
+
+/**
+ * Whether the user answers on their own model keys rather than the shared
+ * trial pool. The vault also holds a Cloudinary account and a database
+ * address, and neither answers a message. Counting rows mistook them for model
+ * keys in four separate places — the router, the extension's session, the chat
+ * page and the settings pages — so every one of them asks this instead.
+ */
+export function ownsModelKey(vaultIds: Iterable<string>): boolean {
+  for (const id of vaultIds) if (MODEL_PROVIDER_IDS.has(id)) return true
+  return false
+}
 
 export interface ProviderKeySummary {
   readonly providerId: string
@@ -31,6 +46,8 @@ export async function saveProviderKey(
   userId: string,
   providerId: string,
   plaintext: string,
+  /** What the settings page shows. The last four characters by default. */
+  hint?: string,
 ): Promise<void> {
   const trimmed = plaintext.trim()
   if (trimmed.length === 0) throw new Error('empty key')
@@ -39,7 +56,7 @@ export async function saveProviderKey(
     userId,
     providerId,
     secret: encryptSecret(trimmed, vaultConfig().KEY_ENCRYPTION_KEY),
-    hint: keyHint(trimmed),
+    hint: hint ?? keyHint(trimmed),
   }
 
   await db()

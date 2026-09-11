@@ -5,7 +5,7 @@ import { safeAuth } from '@/auth'
 import LimitMeter from '@/components/limit-meter'
 import { runtimeConfig } from '@/config'
 import { limitsFor } from '@/lib/limits'
-import { listProviderKeys } from '@/lib/provider-keys'
+import { listProviderKeys, ownsModelKey } from '@/lib/provider-keys'
 import { usageTotalsForUser } from '@/lib/savings'
 import { demoRemaining } from '@/lib/usage'
 
@@ -26,7 +26,7 @@ export default async function LimitsPage({
     : referenceModel()
 
   const keys = await listProviderKeys(userId)
-  const trial = keys.length > 0 ? null : await demoRemaining(userId)
+  const trial = ownsModelKey(keys.map((key) => key.providerId)) ? null : await demoRemaining(userId)
   const [limits, savings] = await Promise.all([
     limitsFor(userId, {
       trialRemaining: trial?.remaining ?? null,

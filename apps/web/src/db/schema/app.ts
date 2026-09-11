@@ -115,6 +115,8 @@ export const demoUsage = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     day: date('day').notNull(),
     count: integer('count').notNull().default(0),
+    /** Pictures written to the operator's shared Cloudinary pool today. */
+    images: integer('images').notNull().default(0),
   },
   (table) => [uniqueIndex('demo_usage_user_day').on(table.userId, table.day)],
 )

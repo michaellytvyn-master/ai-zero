@@ -47,7 +47,7 @@ const faq = (names: string) => [
   },
   {
     q: 'Is my conversation text stored?',
-    a: 'Your conversations are stored so you can return to them, and you can delete them. Per-request analytics record provider, model, token counts, latency, status and timestamp — never the text.',
+    a: 'Only where you choose. Connect your own Postgres and your history lives there, not with us. Without one, we keep your last 20 messages so you can try it. Per-request analytics record provider, model, token counts, latency, status and timestamp — never the text.',
   },
 ]
 

@@ -14,7 +14,7 @@ import type { FailoverDeps, ProviderKey } from '@zca/router-core'
 import type { UsageEvent } from '@zca/shared'
 import { operatorKeys, runtimeConfig } from '../config'
 import { PostgresCooldownStore } from './cooldowns'
-import { decryptedKeys } from './provider-keys'
+import { decryptedKeys, ownsModelKey } from './provider-keys'
 import { recordUsage } from './usage'
 
 /**
@@ -75,7 +75,7 @@ export async function buildRouterContext(
   // Counted across model providers only. The vault also holds a Cloudinary
   // credential for image storage, and connecting somewhere to keep pictures
   // must not silently take a user off the shared model pool.
-  const usingOwnKeys = allProviders().some((provider) => userKeys.has(provider.id))
+  const usingOwnKeys = ownsModelKey(userKeys.keys())
 
   const keyFor = (provider: Provider): ProviderKey | null => {
     if (usingOwnKeys) {

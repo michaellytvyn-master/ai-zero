@@ -25,7 +25,7 @@ const googleSchema = z.object({
 })
 
 const runtimeSchema = z.object({
-  DEMO_MESSAGES_PER_ACCOUNT_PER_DAY: z.coerce.number().int().positive().default(10),
+  DEMO_MESSAGES_PER_ACCOUNT_PER_DAY: z.coerce.number().int().positive().default(20),
   DEMO_MODEL: z.string().min(1).default('auto'),
   FIRST_TOKEN_TIMEOUT_MS: z.coerce.number().int().positive().default(8000),
   PROVIDER_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(60),

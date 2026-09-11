@@ -18,9 +18,7 @@ const { decryptedKeys, listProviderKeys, saveProviderKey, deleteProviderKey } = 
   './provider-keys'
 )
 const { claimDemoMessage, demoRemaining, recordUsage } = await import('./usage')
-const { appendMessage, createConversation, loadConversation, listConversations } = await import(
-  './conversations'
-)
+const { trialStore } = await import('./content-store')
 const { userRows, providerRows } = await import('./admin')
 const { PostgresCooldownStore } = await import('./cooldowns')
 
@@ -102,26 +100,31 @@ describeDb('conversations', () => {
     const owner = await makeUser()
     const stranger = await makeUser()
 
-    const conversationId = await createConversation(owner, 'a private question')
-    await appendMessage(conversationId, { role: 'user', content: 'a private question' })
+    const conversationId = await trialStore(owner).create('a private question')
+    await trialStore(owner).append(conversationId, { role: 'user', content: 'a private question' })
 
-    expect(await loadConversation(owner, conversationId)).not.toBeNull()
-    expect(await loadConversation(stranger, conversationId)).toBeNull()
-    expect((await listConversations(stranger)).items).toHaveLength(0)
+    expect(await trialStore(owner).load(conversationId)).not.toBeNull()
+    expect(await trialStore(stranger).load(conversationId)).toBeNull()
+    expect((await trialStore(stranger).list()).items).toHaveLength(0)
+    // Appending into someone else's conversation is refused, not silently done.
+    expect(
+      await trialStore(stranger).append(conversationId, { role: 'user', content: 'injected' }),
+    ).toBe(false)
   })
 
   it('round trips a conversation and titles it from the first message', async () => {
     const userId = await makeUser()
-    const conversationId = await createConversation(userId, 'how do I center a div')
-    await appendMessage(conversationId, { role: 'user', content: 'how do I center a div' })
-    await appendMessage(conversationId, {
+    const store = trialStore(userId)
+    const conversationId = await store.create('how do I center a div')
+    await store.append(conversationId, { role: 'user', content: 'how do I center a div' })
+    await store.append(conversationId, {
       role: 'assistant',
       content: 'flexbox',
       providerId: 'groq',
       model: 'openai/gpt-oss-20b',
     })
 
-    const loaded = await loadConversation(userId, conversationId)
+    const loaded = await store.load(conversationId)
     expect(loaded?.summary.title).toBe('how do I center a div')
     expect(loaded?.messages.map((m) => m.content)).toEqual(['how do I center a div', 'flexbox'])
     expect(loaded?.messages[1]?.providerId).toBe('groq')
@@ -131,8 +134,11 @@ describeDb('conversations', () => {
 describeDb('admin views', () => {
   it('aggregates usage without touching message content', async () => {
     const userId = await makeUser()
-    const conversationId = await createConversation(userId, 'secret topic')
-    await appendMessage(conversationId, { role: 'user', content: 'a very secret question' })
+    const conversationId = await trialStore(userId).create('secret topic')
+    await trialStore(userId).append(conversationId, {
+      role: 'user',
+      content: 'a very secret question',
+    })
 
     await recordUsage(userId, {
       providerId: 'groq',

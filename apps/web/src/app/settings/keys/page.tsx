@@ -1,7 +1,11 @@
 import { redirect } from 'next/navigation'
 import { orderedProviders } from '@zca/providers'
 import { safeAuth } from '@/auth'
+import DatabaseClient from '@/components/database-client'
 import KeysClient from '@/components/keys-client'
+import { connectedDatabase } from '@/lib/connect-database'
+import { TRIAL_HISTORY_MESSAGES } from '@/lib/content-store'
+import { TRIAL_IMAGES_PER_DAY } from '@/lib/usage'
 import { CLOUDINARY_KEY_ID } from '@/lib/image-store'
 import { IMAGE_LIFETIME_MS } from '@/lib/images'
 import { listProviderKeys } from '@/lib/provider-keys'
@@ -20,6 +24,7 @@ export default async function AccountPage() {
     lastStatus: key.lastStatus,
   }))
   const minutes = Math.round(IMAGE_LIFETIME_MS / 60_000)
+  const database = await connectedDatabase(userId)
 
   return (
     <>
@@ -44,13 +49,22 @@ export default async function AccountPage() {
         initialKeys={stored}
       />
 
+      <h2 style={{ marginTop: 34 }}>Where your chat history is kept</h2>
+      <p className="muted">
+        Without a database of your own, we keep only your last {TRIAL_HISTORY_MESSAGES} messages —
+        enough to try it. Connect your own Postgres and every conversation is written there instead,
+        and kept for as long as you keep it. Ours then holds only your account, your encrypted keys,
+        your daily allowance and usage counts — never the text of a conversation.
+      </p>
+      <DatabaseClient where={database} trialMessages={TRIAL_HISTORY_MESSAGES} />
+
       <h2 style={{ marginTop: 34 }}>Where generated pictures are kept</h2>
       <p className="muted">
-        Without an account of your own, a generated picture goes to our shared test pool and is
-        deleted after {minutes} minutes — it is somewhere to try the feature, not somewhere to keep
-        anything. Connect your own Cloudinary account and pictures are written there instead, on
-        your own free tier, and are never deleted by us. They are yours, in your account, under your
-        control.
+        Without an account of your own, a generated picture goes to our shared test pool —
+        {TRIAL_IMAGES_PER_DAY} a day, each deleted after {minutes} minutes. It is somewhere to try
+        the feature, not somewhere to keep anything. Connect your own Cloudinary account and
+        pictures are written there instead, on your own free tier, and are never deleted by us. They
+        are yours, in your account, under your control.
       </p>
       <KeysClient
         providers={[

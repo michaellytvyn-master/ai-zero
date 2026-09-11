@@ -4,14 +4,15 @@ import { applyResponseMode, responseMode } from '@zca/shared'
 import { SEARCH_MODEL, readLinkedPages } from '@/lib/web-context'
 import { UnauthenticatedError, requireUser } from '@/auth'
 import { runtimeConfig } from '@/config'
-import {
-  appendMessage,
-  createConversation,
-  loadConversation,
-  toChatMessages,
-} from '@/lib/conversations'
+import { type ContentStore, contentStoreFor } from '@/lib/content-store'
+import { toChatMessages } from '@/lib/conversations'
+import { UserDatabaseError } from '@/lib/user-database'
 import { buildRouterContext, effectiveModel } from '@/lib/router-deps'
-import { demoExhaustedResponse, unauthenticatedResponse } from '@/lib/responses'
+import {
+  demoExhaustedResponse,
+  unauthenticatedResponse,
+  userDatabaseUnavailableResponse,
+} from '@/lib/responses'
 import { claimDemoMessage } from '@/lib/usage'
 import { claimRequestSlot, tooManyRequests } from '@/lib/rate-limit'
 
@@ -41,16 +42,21 @@ export async function POST(request: Request): Promise<Response> {
       )
     }
 
-    const { conversationId, history } = await resolveConversation(user.id, parsed.data)
+    // Applies whoever the keys belong to. Provider quotas are per organisation,
+    // so many users cost nothing — but one runaway client would make this
+    // server's egress look abusive to everyone sharing it. Claimed before the
+    // user's own database is touched, too: a database that does not answer
+    // holds each request for the length of a connection timeout.
+    const slot = await claimRequestSlot(user.id)
+    if (!slot.allowed) return tooManyRequests(slot)
+
+    // Before any allowance is spent: if the user's own database cannot be
+    // reached, say so now, not after a model has answered into nowhere.
+    const store = await contentStoreFor(user.id)
+    const { conversationId, history } = await resolveConversation(store, parsed.data)
     if (conversationId === null) {
       return Response.json({ error: { type: 'not_found' } }, { status: 404 })
     }
-
-    // Applies whoever the keys belong to. Provider quotas are per organisation,
-    // so many users cost nothing — but one runaway client would make this
-    // server's egress look abusive to everyone sharing it.
-    const slot = await claimRequestSlot(user.id)
-    if (!slot.allowed) return tooManyRequests(slot)
 
     const { deps, usingOwnKeys } = await buildRouterContext(user.id, 'router')
     if (!usingOwnKeys) {
@@ -60,7 +66,7 @@ export async function POST(request: Request): Promise<Response> {
       }
     }
 
-    await appendMessage(conversationId, { role: 'user', content: parsed.data.content })
+    await store.append(conversationId, { role: 'user', content: parsed.data.content })
 
     // Models cannot browse. A link in the question is read here and handed over
     // as material; a request to search goes to the one model that can.
@@ -108,21 +114,23 @@ export async function POST(request: Request): Promise<Response> {
       return failureResponse(error)
     }
 
-    return streamAndPersist(events, selected, conversationId, web.pages)
+    return streamAndPersist(events, selected, conversationId, web.pages, store)
   } catch (error) {
     if (error instanceof UnauthenticatedError) return unauthenticatedResponse()
+    if (error instanceof UserDatabaseError)
+      return userDatabaseUnavailableResponse(error.userMessage)
     throw error
   }
 }
 
 async function resolveConversation(
-  userId: string,
+  store: ContentStore,
   input: z.infer<typeof schema>,
 ): Promise<{ conversationId: string | null; history: ReturnType<typeof toChatMessages> }> {
   if (input.conversationId === undefined) {
-    return { conversationId: await createConversation(userId, input.content), history: [] }
+    return { conversationId: await store.create(input.content), history: [] }
   }
-  const loaded = await loadConversation(userId, input.conversationId)
+  const loaded = await store.load(input.conversationId)
   if (loaded === null) return { conversationId: null, history: [] }
   return { conversationId: input.conversationId, history: toChatMessages(loaded.messages) }
 }
@@ -132,6 +140,7 @@ function streamAndPersist(
   selected: Extract<RouterEvent, { kind: 'selected' }>,
   conversationId: string,
   pages: { url: string; title: string; ok: boolean; note: string }[],
+  store: ContentStore,
 ): Response {
   const encoder = new TextEncoder()
 
@@ -169,12 +178,23 @@ function streamAndPersist(
       // Persist whatever arrived: a truncated answer is still the user's
       // history, and losing it would be worse than showing it cut short.
       if (answer.length > 0) {
-        await appendMessage(conversationId, {
-          role: 'assistant',
-          content: answer,
-          providerId: selected.providerId,
-          model: selected.model,
-        }).catch(() => {})
+        await store
+          .append(conversationId, {
+            role: 'assistant',
+            content: answer,
+            providerId: selected.providerId,
+            model: selected.model,
+          })
+          .catch((error: unknown) => {
+            // The reply reached the user; only saving it failed. Say so, rather
+            // than let them find the gap in their history later.
+            send('error', {
+              message:
+                error instanceof UserDatabaseError
+                  ? error.userMessage
+                  : 'The reply was shown but could not be saved.',
+            })
+          })
       }
 
       send('done', { conversationId })

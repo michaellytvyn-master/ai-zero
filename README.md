@@ -52,9 +52,13 @@ are never typed. [How that is made safe →](docs/agent.md)
 **Speaks OpenAI.** Point any OpenAI SDK at your own endpoint and it runs through the same keys and
 the same failover. Your code needs no changes beyond a base URL.
 
-**Keeps your keys to itself.** Provider keys are encrypted with AES-256-GCM under a key that never
-enters the database. Usage records hold token counts and timings, never text — a test fails the
-build if a content field is ever added.
+**Keeps your history in your database.** Connect a Postgres of your own and every conversation is
+written there, not here; the service keeps only accounts, encrypted keys and usage counts. Without
+one, it keeps your last 20 messages so you can try it. [How the connection is made safe →](docs/features.md#where-your-data-lives)
+
+**Keeps your keys to itself.** Provider keys — and your database address — are encrypted with
+AES-256-GCM under a key that never enters the database. Usage records hold token counts and
+timings, never text; a test fails the build if a content field is ever added.
 
 ## Quick start
 

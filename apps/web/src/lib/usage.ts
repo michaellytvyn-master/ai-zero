@@ -48,6 +48,32 @@ export async function claimDemoMessage(userId: string): Promise<DemoAllowance> {
   return { allowed: true, remaining: Math.max(0, limit - Number(row.count)), limit }
 }
 
+/**
+ * Pictures a user may keep in the operator's shared Cloudinary pool per day.
+ * Each lives thirty minutes; this caps how many there can be. Someone who
+ * connects their own Cloudinary account is not counted at all.
+ */
+export const TRIAL_IMAGES_PER_DAY = 5
+
+/**
+ * Claims one slot, or refuses. The same conditional upsert as the message
+ * allowance, so two pictures requested at once cannot both take the last slot.
+ */
+export async function claimTrialImage(userId: string): Promise<DemoAllowance> {
+  const limit = TRIAL_IMAGES_PER_DAY
+  const claimed = await db().execute(sql`
+    insert into ${demoUsage} (user_id, day, images)
+    values (${userId}, current_date, 1)
+    on conflict (user_id, day) do update
+      set images = ${demoUsage}.images + 1
+      where ${demoUsage}.images < ${limit}
+    returning images
+  `)
+  const row = claimed.rows[0] as { images: number } | undefined
+  if (row === undefined) return { allowed: false, remaining: 0, limit }
+  return { allowed: true, remaining: Math.max(0, limit - Number(row.images)), limit }
+}
+
 export async function demoRemaining(userId: string): Promise<DemoAllowance> {
   const limit = runtimeConfig().DEMO_MESSAGES_PER_ACCOUNT_PER_DAY
   const rows = await db()

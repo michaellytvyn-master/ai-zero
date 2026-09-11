@@ -25,6 +25,8 @@ interface SignupOption {
 export default function ChatClient(props: {
   conversations: { id: string; title: string; updatedAt: string }[]
   nextCursor: string | null
+  /** Where the history is kept and what that means, or why it cannot be reached. */
+  historyNotice: string | null
   activeId: string | null
   initialMessages: Omit<Turn, 'id'>[]
   usingOwnKeys: boolean
@@ -115,6 +117,7 @@ export default function ChatClient(props: {
         },
         onDelta: (chunk) => setTurns((previous) => appendToLast(previous, chunk)),
         onReasoning: (chunk) => setTurns((previous) => appendReasoningToLast(previous, chunk)),
+        onNotice: (message) => setError(message),
         onExhausted: (options) => {
           setNeedsKey(options)
           setRemaining(0)
@@ -168,6 +171,11 @@ export default function ChatClient(props: {
             </span>
           )}
           {props.usingOwnKeys && <span>running on your own keys</span>}
+          {props.historyNotice !== null && (
+            <span>
+              · {props.historyNotice} <Link href="/settings/keys">Settings</Link>
+            </span>
+          )}
         </div>
 
         <MessageLog turns={turns} busy={busy} logRef={log} />

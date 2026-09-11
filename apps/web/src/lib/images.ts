@@ -6,9 +6,9 @@ import { deleteImage, operatorCloudinary } from './cloudinary'
 /**
  * How long a picture survives in the operator's shared test pool: long enough
  * to look at and save, short enough not to fill the account. A picture in the
- * user's own account has no lifetime at all.
+ * user's own account has no lifetime at all — and is not recorded here.
  */
-export const IMAGE_LIFETIME_MS = 60 * 60 * 1000
+export const IMAGE_LIFETIME_MS = 30 * 60 * 1000
 
 export type ImageStorage = 'operator' | 'user'
 

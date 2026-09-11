@@ -20,7 +20,10 @@ not be named.
 - The browser agent doing something irreversible without the confirmation it promises, typing a
   credential, or opening an address that carries page content out — see
   [docs/agent.md](docs/agent.md) for the rules it is meant to keep.
-- Server-side request forgery through the link reader.
+- Server-side request forgery through the link reader, or through connecting a user's own
+  database — reaching a private address, or one a hostname switches to after it was checked.
+- Anything that writes one account's conversations where another can read them, or that stores a
+  user's history in the operator's database once they have connected their own.
 - Bypassing the per-account rate limit or the trial allowance.
 
 ## Worth knowing before you look
@@ -41,5 +44,9 @@ These are deliberate, documented, and not vulnerabilities in themselves:
 - Only an extension token can read provider keys in the clear — not an API key, not a site cookie.
 - Usage records cannot carry message text: a test pins their exact fields.
 - The link reader refuses private, loopback, link-local and metadata addresses on every redirect hop.
+- A user's database is reached only at a public address resolved once, over TLS, with every record the
+  name resolves to checked. The development escape hatch for this is ignored in production.
+- The trial history keeps at most 20 messages per account; a user's own database address never
+  reaches the extension.
 - The agent refuses credentials by field and by value shape, and confirms submits, sends and
   model-composed addresses. Its confirmation resolves *no* on every path but an explicit *Do it*.

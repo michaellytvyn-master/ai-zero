@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { orderedProviders } from '@zca/providers'
 import { runtimeConfig } from '@/config'
+import { TRIAL_HISTORY_MESSAGES } from '@/lib/content-store'
 import { IMAGE_LIFETIME_MS } from '@/lib/images'
 
 export const metadata: Metadata = {
@@ -45,11 +46,25 @@ export default function PrivacyPage() {
       </p>
 
       <h2>Your conversations</h2>
+      <p>Where they are kept is up to you.</p>
+      <ul className="muted">
+        <li>
+          <strong>In your own database.</strong> Connect a Postgres of your own under Settings and
+          every conversation is written there — to your database, not ours. We keep its address,
+          encrypted like a key, and nothing of what is in it. Disconnect and everything stays where
+          it is; only this service stops using it.
+        </li>
+        <li>
+          <strong>Otherwise, your last {TRIAL_HISTORY_MESSAGES} messages here.</strong> Enough to
+          try the service. Older ones are deleted as new ones arrive, and connecting your own
+          database moves what is left into it and deletes it from ours.
+        </li>
+      </ul>
       <p>
-        Messages you send and the replies you receive are saved to your account, so you can return
-        to them from another device or from the browser extension. You can delete any conversation,
-        which removes it. Administrators of this service cannot read your conversations, and no
-        operator page queries them.
+        Either way this service sees your messages while it passes them to the model you chose —
+        that is how an answer is produced — and keeps them nowhere else. You can delete any
+        conversation. Administrators cannot read your conversations, and no operator page queries
+        them.
       </p>
 
       <h2>Your provider keys</h2>
@@ -57,7 +72,8 @@ export default function PrivacyPage() {
         Keys you add are encrypted with AES-256-GCM before they are written to the database. The key
         that opens them is held outside the database, so a database dump on its own reveals nothing.
         Yours is decrypted only in memory, only while one of your own requests is being served, and
-        never written to a log. Remove a key and the row is deleted.
+        never written to a log. Remove a key and the row is deleted. Your database address, if you
+        connect one, is stored the same way.
       </p>
 
       <h2>Usage records</h2>
